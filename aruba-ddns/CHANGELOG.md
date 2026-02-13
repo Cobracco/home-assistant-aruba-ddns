@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.4
+
+- Rimossa dipendenza dal download esterno di `dehydrated` in build.
+- Aggiunto `dehydrated` direttamente in `rootfs/usr/bin` per rendere il build più affidabile.
+
 ## 0.2.3
 
 - Fix build immagine add-on: sorgente `dehydrated` corretta verso fork compatibile (`Xebozone/dehydrated`).

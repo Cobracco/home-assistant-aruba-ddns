@@ -1,0 +1,279 @@
+#!/usr/bin/with-contenv bashio
+# shellcheck shell=bash
+set -euo pipefail
+
+CERT_DIR=/data/letsencrypt
+WORK_DIR=/data/workdir
+LE_UPDATE="0"
+
+API_BASE=$(bashio::config 'api_base')
+API_KEY=$(bashio::config 'api_key')
+USERNAME=$(bashio::config 'username')
+PASSWORD=$(bashio::config 'password')
+OTP=$(bashio::config 'otp')
+WAIT_TIME=$(bashio::config 'seconds')
+IPV4_CFG=$(bashio::config 'ipv4')
+IPV6_CFG=$(bashio::config 'ipv6')
+ALGO=$(bashio::config 'lets_encrypt.algo')
+
+urlencode() {
+  jq -rn --arg v "$1" '$v|@uri'
+}
+
+to_api_type() {
+  case "${1^^}" in
+    A) echo "a" ;;
+    AAAA) echo "aAAA" ;;
+    *) return 1 ;;
+  esac
+}
+
+resolve_ip() {
+  local cfg="$1"
+  if [[ -z "${cfg}" ]]; then
+    echo ""
+  elif [[ "${cfg}" == *"://"* ]]; then
+    curl -fsSL -m 10 "${cfg}" | tr -d ' \t\r\n'
+  else
+    echo "${cfg}" | tr -d ' \t\r\n'
+  fi
+}
+
+normalize_record_name() {
+  local zone="$1"
+  local name="$2"
+  local z="${zone%.}"
+  local n="${name%.}"
+
+  if [[ -z "${n}" || "${n}" == "@" ]]; then
+    echo "${z}"
+  elif [[ "${n}" == *."${z}" ]]; then
+    echo "${n}"
+  else
+    echo "${n}.${z}"
+  fi
+}
+
+auth_token() {
+  local encoded_password payload otp_param=""
+
+  encoded_password=$(printf '%s' "${PASSWORD}" | base64 | tr -d '\n')
+  if [[ -n "${OTP}" ]]; then
+    otp_param="&otp=$(urlencode "${OTP}")"
+  fi
+
+  payload="grant_type=password&username=$(urlencode "${USERNAME}")&password=$(urlencode "${encoded_password}")${otp_param}"
+
+  curl -fsSL -X POST "${API_BASE%/}/auth/token" \
+    -H "Content-Type: application/x-www-form-urlencoded" \
+    -H "Authorization-Key: ${API_KEY}" \
+    --data "${payload}" | jq -r '.access_token // empty'
+}
+
+api_get_zone() {
+  local token="$1"
+  local zone="$2"
+  local encoded_zone
+  encoded_zone=$(urlencode "${zone}")
+
+  curl -fsSL "${API_BASE%/}/api/domains/dns/${encoded_zone}/details" \
+    -H "Authorization: ${token}"
+}
+
+api_put_record() {
+  local token="$1"
+  local payload="$2"
+
+  curl -fsSL -X PUT "${API_BASE%/}/api/domains/dns/record" \
+    -H "Content-Type: application/json" \
+    -H "Authorization: ${token}" \
+    --data "${payload}"
+}
+
+api_post_record() {
+  local token="$1"
+  local payload="$2"
+
+  curl -fsSL -X POST "${API_BASE%/}/api/domains/dns/record" \
+    -H "Content-Type: application/json" \
+    -H "Authorization: ${token}" \
+    --data "${payload}"
+}
+
+le_renew() {
+  local domain_args=()
+  local domain
+
+  while IFS= read -r domain; do
+    [[ -z "${domain}" || "${domain}" == "null" ]] && continue
+    domain_args+=("--domain" "${domain}")
+  done < <(jq -r '.lets_encrypt.domains[]?' /data/options.json)
+
+  if [[ "${#domain_args[@]}" -eq 0 ]]; then
+    bashio::log.warning "Let's Encrypt attivo ma nessun dominio configurato in lets_encrypt.domains"
+    LE_UPDATE="$(date +%s)"
+    return 0
+  fi
+
+  bashio::log.info "Rinnovo certificati Let's Encrypt"
+  dehydrated --cron --separate-challenges --algo "${ALGO}" \
+    --hook /root/hooks.sh --challenge dns-01 \
+    "${domain_args[@]}" --out "${CERT_DIR}" --config "${WORK_DIR}/config" || true
+
+  LE_UPDATE="$(date +%s)"
+}
+
+update_records() {
+  local token="$1"
+  local current_ipv4="$2"
+  local current_ipv6="$3"
+  local total
+
+  total=$(jq '.records | length' /data/options.json)
+  if [[ "${total}" -eq 0 ]]; then
+    bashio::log.warning "Nessun record configurato"
+    return 0
+  fi
+
+  for idx in $(seq 0 $((total - 1))); do
+    local zone name type create_if_missing content desired_content api_type zone_data
+    local zone_id full_name existing existing_id existing_content payload
+
+    zone=$(jq -r ".records[${idx}].zone" /data/options.json)
+    name=$(jq -r ".records[${idx}].name" /data/options.json)
+    type=$(jq -r ".records[${idx}].type" /data/options.json)
+    create_if_missing=$(jq -r ".records[${idx}].create_if_missing // true" /data/options.json)
+    content=$(jq -r ".records[${idx}].content // \"\"" /data/options.json)
+
+    if [[ -z "${zone}" || -z "${name}" || -z "${type}" ]]; then
+      bashio::log.warning "Record #${idx}: configurazione incompleta, salto"
+      continue
+    fi
+
+    full_name=$(normalize_record_name "${zone}" "${name}")
+
+    if ! api_type=$(to_api_type "${type}"); then
+      bashio::log.warning "Record ${zone}/${name}: type non supportato (${type})"
+      continue
+    fi
+
+    if [[ -n "${content}" ]]; then
+      desired_content="${content}"
+    elif [[ "${type^^}" == "A" ]]; then
+      desired_content="${current_ipv4}"
+    else
+      desired_content="${current_ipv6}"
+    fi
+
+    if [[ -z "${desired_content}" ]]; then
+      bashio::log.warning "Record ${full_name} (${type}): contenuto vuoto, salto"
+      continue
+    fi
+
+    if ! zone_data=$(api_get_zone "${token}" "${zone}" 2>/tmp/aruba_zone_err.log); then
+      bashio::log.warning "Record ${full_name}: errore lettura zona ${zone}: $(cat /tmp/aruba_zone_err.log)"
+      continue
+    fi
+
+    zone_id=$(echo "${zone_data}" | jq -r '.Id // empty')
+    if [[ -z "${zone_id}" ]]; then
+      bashio::log.warning "Record ${full_name}: Id zona non trovato"
+      continue
+    fi
+
+    existing=$(echo "${zone_data}" | jq -c \
+      --arg n "${full_name,,}" \
+      --arg t "${api_type,,}" \
+      '[.Records[]? | select((.Name // "" | ascii_downcase | sub("\\.$";"")) == ($n | sub("\\.$";"")) and (.Type // "" | ascii_downcase) == $t)] | first // empty')
+
+    if [[ -n "${existing}" && "${existing}" != "null" ]]; then
+      existing_id=$(echo "${existing}" | jq -r '.Id')
+      existing_content=$(echo "${existing}" | jq -r '.Content // ""')
+
+      if [[ "${existing_content}" == "${desired_content}" ]]; then
+        bashio::log.debug "NOCHANGE ${full_name} (${type}) -> ${desired_content}"
+        continue
+      fi
+
+      payload=$(jq -nc \
+        --argjson id "${existing_id}" \
+        --arg name "${full_name}" \
+        --arg content "${desired_content}" \
+        '{IdRecord: $id, Name: $name, Content: $content}')
+
+      if api_put_record "${token}" "${payload}" >/tmp/aruba_put_ok.log 2>/tmp/aruba_put_err.log; then
+        bashio::log.info "UPDATED ${full_name} (${type}) -> ${desired_content}"
+      else
+        bashio::log.warning "Errore update ${full_name}: $(cat /tmp/aruba_put_err.log)"
+      fi
+      continue
+    fi
+
+    if [[ "${create_if_missing}" != "true" ]]; then
+      bashio::log.warning "Record ${full_name} non trovato e create_if_missing=false"
+      continue
+    fi
+
+    payload=$(jq -nc \
+      --argjson idDomain "${zone_id}" \
+      --arg typeVal "${api_type}" \
+      --arg name "${full_name}" \
+      --arg content "${desired_content}" \
+      '{IdDomain: $idDomain, Type: $typeVal, Name: $name, Content: $content}')
+
+    if api_post_record "${token}" "${payload}" >/tmp/aruba_post_ok.log 2>/tmp/aruba_post_err.log; then
+      bashio::log.info "CREATED ${full_name} (${type}) -> ${desired_content}"
+    else
+      bashio::log.warning "Errore create ${full_name}: $(cat /tmp/aruba_post_err.log)"
+    fi
+  done
+}
+
+if bashio::config.true 'lets_encrypt.accept_terms'; then
+  mkdir -p "${CERT_DIR}" "${WORK_DIR}"
+
+  if [[ -e "${WORK_DIR}/lock" ]]; then
+    rm -f "${WORK_DIR}/lock"
+    bashio::log.warning "Reset dehydrated lock file"
+  fi
+
+  if [[ ! -f "${WORK_DIR}/config" ]]; then
+    touch "${WORK_DIR}/config"
+  fi
+
+  if [[ ! -d "${CERT_DIR}/accounts" ]]; then
+    dehydrated --register --accept-terms --config "${WORK_DIR}/config" || true
+  fi
+fi
+
+bashio::log.info "Starting Aruba DDNS"
+while true; do
+  token=""
+  token=$(auth_token 2>/tmp/aruba_auth_err.log || true)
+
+  if [[ -z "${token}" ]]; then
+    bashio::log.error "Autenticazione Aruba fallita: $(cat /tmp/aruba_auth_err.log)"
+    sleep "${WAIT_TIME}"
+    continue
+  fi
+
+  ipv4=$(resolve_ip "${IPV4_CFG}")
+  ipv6=$(resolve_ip "${IPV6_CFG}")
+
+  if [[ -z "${ipv4}" ]]; then
+    ipv4=$(curl -fsSL -m 10 https://api.ipify.org || true)
+  fi
+
+  if [[ -n "${IPV6_CFG}" && -z "${ipv6}" ]]; then
+    ipv6=$(curl -fsSL -m 10 https://api6.ipify.org || true)
+  fi
+
+  update_records "${token}" "${ipv4}" "${ipv6}"
+
+  now="$(date +%s)"
+  if bashio::config.true 'lets_encrypt.accept_terms' && [[ $((now - LE_UPDATE)) -ge 43200 ]]; then
+    le_renew
+  fi
+
+  sleep "${WAIT_TIME}"
+done

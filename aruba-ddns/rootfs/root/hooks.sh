@@ -125,7 +125,7 @@ deploy_challenge() {
   existing_same=$(echo "$zone_data" | jq -r \
     --arg n "${fqdn,,}" \
     --arg c "$token_value" \
-    '[.Records[]? | select((.Name // "" | ascii_downcase | sub("\\.$";"")) == ($n | sub("\\.$";"")) and ((.Type // "" | ascii_downcase) == "txt") and ((.Content // "") == $c))] | length')
+    '[.Records[]? | select((.Name // "" | tostring | ascii_downcase | sub("\\.$";"")) == ($n | sub("\\.$";"")) and ((.Type // "" | tostring | ascii_downcase) == "txt") and ((.Content // "" | tostring) == $c))] | length')
   if [[ "$existing_same" -gt 0 ]]; then
     return 0
   fi
@@ -163,7 +163,7 @@ clean_challenge() {
   ids=$(echo "$zone_data" | jq -r \
     --arg n "${fqdn,,}" \
     --arg c "$token_value" \
-    '[.Records[]? | select((.Name // "" | ascii_downcase | sub("\\.$";"")) == ($n | sub("\\.$";"")) and ((.Type // "" | ascii_downcase) == "txt") and ((.Content // "") == $c)) | .Id] | .[]?')
+    '[.Records[]? | select((.Name // "" | tostring | ascii_downcase | sub("\\.$";"")) == ($n | sub("\\.$";"")) and ((.Type // "" | tostring | ascii_downcase) == "txt") and ((.Content // "" | tostring) == $c)) | .Id] | .[]?')
 
   while IFS= read -r id; do
     [[ -z "$id" ]] && continue

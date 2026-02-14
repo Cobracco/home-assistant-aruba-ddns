@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.1
+
+- Fix parsing record Aruba non stringa: normalizzazione `tostring` nei filtri `jq` per evitare l'errore `explode input must be a string`.
+
 ## 0.3.0
 
 - Rimossa completamente la gestione OTP/TOTP (campi config, log e runtime).

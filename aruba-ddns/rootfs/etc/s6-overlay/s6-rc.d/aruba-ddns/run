@@ -11,6 +11,7 @@ API_KEY=$(bashio::config 'api_key')
 USERNAME=$(bashio::config 'username')
 PASSWORD=$(bashio::config 'password')
 OTP=$(bashio::config 'otp')
+PASSWORD_BASE64=$(bashio::config 'password_base64')
 WAIT_TIME=$(bashio::config 'seconds')
 IPV4_CFG=$(bashio::config 'ipv4')
 IPV6_CFG=$(bashio::config 'ipv6')
@@ -55,19 +56,30 @@ normalize_record_name() {
 }
 
 auth_token() {
-  local encoded_password payload otp_param=""
+  local password_for_auth payload otp_param="" code
 
-  encoded_password=$(printf '%s' "${PASSWORD}" | base64 | tr -d '\n')
+  password_for_auth="${PASSWORD}"
+  if [[ "${PASSWORD_BASE64}" == "true" ]]; then
+    password_for_auth=$(printf '%s' "${PASSWORD}" | base64 | tr -d '\n')
+  fi
+
   if [[ -n "${OTP}" ]]; then
     otp_param="&otp=$(urlencode "${OTP}")"
   fi
 
-  payload="grant_type=password&username=$(urlencode "${USERNAME}")&password=$(urlencode "${encoded_password}")${otp_param}"
+  payload="grant_type=password&username=$(urlencode "${USERNAME}")&password=$(urlencode "${password_for_auth}")${otp_param}"
 
-  curl -fsSL -X POST "${API_BASE%/}/auth/token" \
+  code=$(curl -sS -o /tmp/aruba_auth_body.json -w "%{http_code}" -X POST "${API_BASE%/}/auth/token" \
     -H "Content-Type: application/x-www-form-urlencoded" \
     -H "Authorization-Key: ${API_KEY}" \
-    --data "${payload}" | jq -r '.access_token // empty'
+    --data "${payload}" 2>/tmp/aruba_auth_err.log || true)
+
+  if [[ "${code}" != "200" ]]; then
+    echo "HTTP ${code}; $(jq -r '.error_description // .error // .Message // .message // "auth failed"' /tmp/aruba_auth_body.json 2>/dev/null || cat /tmp/aruba_auth_err.log)" >&2
+    return 1
+  fi
+
+  jq -r '.access_token // empty' /tmp/aruba_auth_body.json
 }
 
 api_get_zone() {

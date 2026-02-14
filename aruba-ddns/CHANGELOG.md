@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.5
+
+- Corretto flusso auth Aruba: password inviata in chiaro di default (come da docs Aruba Business).
+- Aggiunta opzione `password_base64` (default `false`) per compatibilita legacy.
+- Migliorato logging auth: ora mostra dettaglio errore HTTP/body su `/auth/token`.
+
 ## 0.2.4
 
 - Rimossa dipendenza dal download esterno di `dehydrated` in build.

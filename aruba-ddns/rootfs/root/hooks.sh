@@ -8,26 +8,38 @@ urlencode() {
 }
 
 auth_token() {
-  local api_base api_key username password otp encoded_password payload otp_param
+  local api_base api_key username password otp password_base64 password_for_auth payload otp_param code
 
   api_base=$(jq -r '.api_base' "$CONFIG_PATH")
   api_key=$(jq -r '.api_key' "$CONFIG_PATH")
   username=$(jq -r '.username' "$CONFIG_PATH")
   password=$(jq -r '.password' "$CONFIG_PATH")
   otp=$(jq -r '.otp // ""' "$CONFIG_PATH")
+  password_base64=$(jq -r '.password_base64 // false' "$CONFIG_PATH")
 
-  encoded_password=$(printf '%s' "$password" | base64 | tr -d '\n')
+  password_for_auth="$password"
+  if [[ "$password_base64" == "true" ]]; then
+    password_for_auth=$(printf '%s' "$password" | base64 | tr -d '\n')
+  fi
+
   otp_param=""
   if [[ -n "$otp" ]]; then
     otp_param="&otp=$(urlencode "$otp")"
   fi
 
-  payload="grant_type=password&username=$(urlencode "$username")&password=$(urlencode "$encoded_password")${otp_param}"
+  payload="grant_type=password&username=$(urlencode "$username")&password=$(urlencode "$password_for_auth")${otp_param}"
 
-  curl -fsSL -X POST "${api_base%/}/auth/token" \
+  code=$(curl -sS -o /tmp/aruba_auth_body.json -w "%{http_code}" -X POST "${api_base%/}/auth/token" \
     -H "Content-Type: application/x-www-form-urlencoded" \
     -H "Authorization-Key: ${api_key}" \
-    --data "$payload" | jq -r '.access_token // empty'
+    --data "$payload" 2>/tmp/aruba_auth_err.log || true)
+
+  if [[ "$code" != "200" ]]; then
+    echo "auth token failed: HTTP ${code}; $(jq -r '.error_description // .error // .Message // .message // "auth failed"' /tmp/aruba_auth_body.json 2>/dev/null || cat /tmp/aruba_auth_err.log)" >&2
+    return 1
+  fi
+
+  jq -r '.access_token // empty' /tmp/aruba_auth_body.json
 }
 
 api_get_zone() {

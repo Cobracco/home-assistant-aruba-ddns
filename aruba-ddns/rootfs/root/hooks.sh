@@ -162,7 +162,16 @@ deploy_challenge() {
     --arg n "${fqdn_lc}" \
     --arg nr "${rel_name}" \
     --arg c "$token_value" \
-    '[.Records[]? | select(((((.Name // "" | tostring | ascii_downcase | sub("\\.$";"")) == ($n | sub("\\.$";""))) or (((.Name // "" | tostring | ascii_downcase | sub("\\.$";"")) == ($nr | sub("\\.$";"")))) and ((((.Type // "" | tostring | ascii_downcase) == "txt") or ((.Type // "" | tostring | ascii_downcase) == "5")) and ((.Content // "" | tostring) == $c)))] | length')
+    '
+    def norm: tostring | ascii_downcase | sub("\\.$";"");
+    def rec_name: (.Name // "" | norm);
+    def is_txt: (((.Type // "" | norm) == "txt") or ((.Type // "" | norm) == "5"));
+    [.Records[]? | select(
+      ((rec_name == ($n | sub("\\.$";""))) or (rec_name == ($nr | sub("\\.$";""))))
+      and is_txt
+      and ((.Content // "" | tostring) == $c)
+    )] | length
+    ')
   if [[ "$existing_same" -gt 0 ]]; then
     return 0
   fi
@@ -170,15 +179,39 @@ deploy_challenge() {
   existing_id=$(echo "$zone_data" | jq -r \
     --arg n "${fqdn_lc}" \
     --arg nr "${rel_name}" \
-    '[.Records[]? | select(((((.Name // "" | tostring | ascii_downcase | sub("\\.$";"")) == ($n | sub("\\.$";""))) or (((.Name // "" | tostring | ascii_downcase | sub("\\.$";"")) == ($nr | sub("\\.$";"")))) and (((.Type // "" | tostring | ascii_downcase) == "txt") or ((.Type // "" | tostring | ascii_downcase) == "5"))) | .Id] | first // empty')
+    '
+    def norm: tostring | ascii_downcase | sub("\\.$";"");
+    def rec_name: (.Name // "" | norm);
+    def is_txt: (((.Type // "" | norm) == "txt") or ((.Type // "" | norm) == "5"));
+    [.Records[]? | select(
+      ((rec_name == ($n | sub("\\.$";""))) or (rec_name == ($nr | sub("\\.$";""))))
+      and is_txt
+    ) | .Id] | first // empty
+    ')
   matched_name=$(echo "$zone_data" | jq -r \
     --arg n "${fqdn_lc}" \
     --arg nr "${rel_name}" \
-    '[.Records[]? | select(((((.Name // "" | tostring | ascii_downcase | sub("\\.$";"")) == ($n | sub("\\.$";""))) or (((.Name // "" | tostring | ascii_downcase | sub("\\.$";"")) == ($nr | sub("\\.$";"")))) and (((.Type // "" | tostring | ascii_downcase) == "txt") or ((.Type // "" | tostring | ascii_downcase) == "5"))) | .Name] | first // empty')
+    '
+    def norm: tostring | ascii_downcase | sub("\\.$";"");
+    def rec_name: (.Name // "" | norm);
+    def is_txt: (((.Type // "" | norm) == "txt") or ((.Type // "" | norm) == "5"));
+    [.Records[]? | select(
+      ((rec_name == ($n | sub("\\.$";""))) or (rec_name == ($nr | sub("\\.$";""))))
+      and is_txt
+    ) | .Name] | first // empty
+    ')
   existing_count=$(echo "$zone_data" | jq -r \
     --arg n "${fqdn_lc}" \
     --arg nr "${rel_name}" \
-    '[.Records[]? | select(((((.Name // "" | tostring | ascii_downcase | sub("\\.$";"")) == ($n | sub("\\.$";""))) or (((.Name // "" | tostring | ascii_downcase | sub("\\.$";"")) == ($nr | sub("\\.$";"")))) and (((.Type // "" | tostring | ascii_downcase) == "txt") or ((.Type // "" | tostring | ascii_downcase) == "5")))] | length')
+    '
+    def norm: tostring | ascii_downcase | sub("\\.$";"");
+    def rec_name: (.Name // "" | norm);
+    def is_txt: (((.Type // "" | norm) == "txt") or ((.Type // "" | norm) == "5"));
+    [.Records[]? | select(
+      ((rec_name == ($n | sub("\\.$";""))) or (rec_name == ($nr | sub("\\.$";""))))
+      and is_txt
+    )] | length
+    ')
 
   if [[ -n "$existing_id" && "$existing_id" != "null" ]]; then
     [[ -z "$matched_name" || "$matched_name" == "null" ]] && matched_name="$fqdn"
@@ -254,7 +287,16 @@ clean_challenge() {
     --arg n "${fqdn_lc}" \
     --arg nr "${rel_name}" \
     --arg c "$token_value" \
-    '[.Records[]? | select(((((.Name // "" | tostring | ascii_downcase | sub("\\.$";"")) == ($n | sub("\\.$";""))) or (((.Name // "" | tostring | ascii_downcase | sub("\\.$";"")) == ($nr | sub("\\.$";"")))) and ((((.Type // "" | tostring | ascii_downcase) == "txt") or ((.Type // "" | tostring | ascii_downcase) == "5")) and ((.Content // "" | tostring) == $c))) | .Id] | .[]?')
+    '
+    def norm: tostring | ascii_downcase | sub("\\.$";"");
+    def rec_name: (.Name // "" | norm);
+    def is_txt: (((.Type // "" | norm) == "txt") or ((.Type // "" | norm) == "5"));
+    [.Records[]? | select(
+      ((rec_name == ($n | sub("\\.$";""))) or (rec_name == ($nr | sub("\\.$";""))))
+      and is_txt
+      and ((.Content // "" | tostring) == $c)
+    ) | .Id] | .[]?
+    ')
 
   while IFS= read -r id; do
     [[ -z "$id" ]] && continue

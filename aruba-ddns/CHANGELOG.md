@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.4.13
+
+- Fix definitivo filtri `jq` nel hook ACME (sintassi valida, senza parentesi sbilanciate).
+- Matching TXT challenge reso piu leggibile/robusto con funzioni `def norm`, `rec_name`, `is_txt`.
+
 ## 0.4.12
 
 - Mitigazione race Save+Restart: attesa sincronizzazione `options.json` all'avvio prima di caricare la configurazione runtime.

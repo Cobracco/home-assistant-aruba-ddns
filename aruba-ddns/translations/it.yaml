@@ -35,10 +35,10 @@ configuration:
     description: >-
       Elenco record da gestire. Per ogni voce imposta:
       `host` (FQDN completo mostrato in lista, es. `casa.brachini.com`),
-      `zone` (zona dominio), `name` (`@` per root o host come `www`),
+      `zone` (zona dominio, opzionale), `name` (`@` per root o host come `www`),
       `type` (`A` o `AAAA`), `create_if_missing` e `content` opzionale.
-      Se `host` e compilato ha priorita su `name`. Se `content` e vuoto,
-      l'add-on usa l'IP pubblico rilevato.
+      `host` e obbligatorio e viene mostrato in lista. Se `zone` e vuoto
+      l'add-on prova a derivarlo da `host` (es. `www.brachini.com` -> `brachini.com`).
   lets_encrypt:
     name: Let's Encrypt
     description: >-

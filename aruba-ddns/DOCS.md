@@ -25,13 +25,13 @@ ipv4: ""
 ipv6: ""
 records:
   - host: www.domain.tld
-    zone: domain.tld
+    zone: ""
     name: ""
     type: A
     create_if_missing: true
     content: ""
   - host: app.domain.tld
-    zone: domain.tld
+    zone: ""
     name: ""
     type: A
     create_if_missing: true
@@ -72,7 +72,9 @@ http:
   - impostare `otp_secret` Base32 per generazione TOTP automatica ad ogni login.
 - `records` supporta più domini e più host nello stesso loop.
 - Per vedere in lista il dominio completo nella UI, compila `host` (FQDN completo).
+- `host` e obbligatorio e viene usato per la voce in lista.
 - Se `host` e compilato, il valore di `name` viene ignorato.
+- `zone` puo restare vuoto: l'add-on prova a derivarla da `host`.
 - Se `content` è vuoto:
   - per record `A`, usa IPv4 pubblico (auto-detect con ipify)
   - per record `AAAA`, usa IPv6 configurato (o URL specificato in `ipv6`)

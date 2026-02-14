@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.11
+
+- Forzata visualizzazione host completo in lista: `host` ora obbligatorio nei record DNS.
+- `zone` ora opzionale: se vuoto, viene derivata automaticamente da `host`.
+
 ## 0.2.10
 
 - Aggiornati esempi record DNS: rimosso `example.it`, ora default con terzo livello (`www.domain.tld`).

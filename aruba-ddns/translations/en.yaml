@@ -35,10 +35,10 @@ configuration:
     description: >-
       List of records to manage. For each item set:
       `host` (full FQDN shown in the list, e.g. `casa.brachini.com`),
-      `zone` (domain zone), `name` (`@` for root or host like `www`),
+      `zone` (domain zone, optional), `name` (`@` for root or host like `www`),
       `type` (`A` or `AAAA`), `create_if_missing`, and optional `content`.
-      If `host` is provided it overrides `name`. If `content` is empty,
-      the add-on uses detected public IP.
+      `host` is required and shown in the list. If `zone` is empty,
+      the add-on tries to derive it from `host` (e.g. `www.brachini.com` -> `brachini.com`).
   lets_encrypt:
     name: Let's Encrypt
     description: >-

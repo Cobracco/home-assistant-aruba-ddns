@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.8
+
+- Aggiunto campo `host` (FQDN completo) nei record DNS per mostrare in lista il dominio completo nella UI Home Assistant.
+- Compatibilita mantenuta: se `host` e vuoto, continua a usare `zone` + `name`.
+
 ## 0.2.7
 
 - Aggiunto supporto TOTP automatico via `otp_secret` (Base32) per autenticazione Aruba con 2FA.

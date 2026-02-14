@@ -34,9 +34,11 @@ configuration:
     name: DNS Records
     description: >-
       List of records to manage. For each item set:
+      `host` (full FQDN shown in the list, e.g. `casa.brachini.com`),
       `zone` (domain zone), `name` (`@` for root or host like `www`),
       `type` (`A` or `AAAA`), `create_if_missing`, and optional `content`.
-      If `content` is empty, the add-on uses detected public IP.
+      If `host` is provided it overrides `name`. If `content` is empty,
+      the add-on uses detected public IP.
   lets_encrypt:
     name: Let's Encrypt
     description: >-

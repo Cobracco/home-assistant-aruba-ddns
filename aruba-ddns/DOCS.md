@@ -24,13 +24,15 @@ seconds: 300
 ipv4: ""
 ipv6: ""
 records:
-  - zone: example.it
-    name: "@"
+  - host: example.it
+    zone: example.it
+    name: ""
     type: A
     create_if_missing: true
     content: ""
-  - zone: example.it
-    name: home
+  - host: home.example.it
+    zone: example.it
+    name: ""
     type: A
     create_if_missing: true
     content: ""
@@ -69,6 +71,8 @@ http:
   - impostare `otp` manuale (priorita massima), oppure
   - impostare `otp_secret` Base32 per generazione TOTP automatica ad ogni login.
 - `records` supporta più domini e più host nello stesso loop.
+- Per vedere in lista il dominio completo nella UI, compila `host` (FQDN completo).
+- Se `host` e compilato, il valore di `name` viene ignorato.
 - Se `content` è vuoto:
   - per record `A`, usa IPv4 pubblico (auto-detect con ipify)
   - per record `AAAA`, usa IPv6 configurato (o URL specificato in `ipv6`)

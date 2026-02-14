@@ -34,9 +34,11 @@ configuration:
     name: Record DNS
     description: >-
       Elenco record da gestire. Per ogni voce imposta:
+      `host` (FQDN completo mostrato in lista, es. `casa.brachini.com`),
       `zone` (zona dominio), `name` (`@` per root o host come `www`),
       `type` (`A` o `AAAA`), `create_if_missing` e `content` opzionale.
-      Se `content` e vuoto, l'add-on usa l'IP pubblico rilevato.
+      Se `host` e compilato ha priorita su `name`. Se `content` e vuoto,
+      l'add-on usa l'IP pubblico rilevato.
   lets_encrypt:
     name: Let's Encrypt
     description: >-

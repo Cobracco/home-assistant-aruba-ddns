@@ -159,24 +159,29 @@ update_records() {
   fi
 
   for idx in $(seq 0 $((total - 1))); do
-    local zone name type create_if_missing content desired_content api_type zone_data
+    local zone host name type create_if_missing content desired_content api_type zone_data
     local zone_id full_name existing existing_id existing_content payload
 
     zone=$(jq -r ".records[${idx}].zone" /data/options.json)
-    name=$(jq -r ".records[${idx}].name" /data/options.json)
+    host=$(jq -r ".records[${idx}].host // \"\"" /data/options.json)
+    name=$(jq -r ".records[${idx}].name // \"\"" /data/options.json)
     type=$(jq -r ".records[${idx}].type" /data/options.json)
     create_if_missing=$(jq -r ".records[${idx}].create_if_missing // true" /data/options.json)
     content=$(jq -r ".records[${idx}].content // \"\"" /data/options.json)
 
-    if [[ -z "${zone}" || -z "${name}" || -z "${type}" ]]; then
+    if [[ -z "${zone}" || -z "${type}" || ( -z "${host}" && -z "${name}" ) ]]; then
       bashio::log.warning "Record #${idx}: configurazione incompleta, salto"
       continue
     fi
 
-    full_name=$(normalize_record_name "${zone}" "${name}")
+    if [[ -n "${host}" ]]; then
+      full_name="${host%.}"
+    else
+      full_name=$(normalize_record_name "${zone}" "${name}")
+    fi
 
     if ! api_type=$(to_api_type "${type}"); then
-      bashio::log.warning "Record ${zone}/${name}: type non supportato (${type})"
+      bashio::log.warning "Record ${full_name}: type non supportato (${type})"
       continue
     fi
 

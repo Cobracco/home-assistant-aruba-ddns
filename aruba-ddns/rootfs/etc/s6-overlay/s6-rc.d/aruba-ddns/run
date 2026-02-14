@@ -20,6 +20,8 @@ IPV4_CFG=""
 IPV6_CFG=""
 ALGO="secp384r1"
 API_TOKEN=""
+CURL_CONNECT_TIMEOUT=10
+CURL_MAX_TIME=20
 
 load_runtime_config() {
   API_BASE=$(bashio::config 'api_base')
@@ -105,6 +107,7 @@ auth_token_for_user() {
   fi
 
   code=$(curl -sS -o "${body_file}" -w "%{http_code}" -X POST "${API_BASE%/}/auth/token" \
+    --connect-timeout "${CURL_CONNECT_TIMEOUT}" -m "${CURL_MAX_TIME}" \
     -H "Content-Type: application/x-www-form-urlencoded" \
     -H "Authorization-Key: ${API_KEY}" \
     --data "${payload}" 2>"${err_file}" || true)
@@ -127,6 +130,7 @@ acquire_api_token() {
   }
 
   if [[ "${DELEGATED_ENABLED}" != "true" ]]; then
+    bashio::log.info "Tentativo login Aruba con utente principale"
     primary_token=$(auth_token_for_user "${USERNAME}" "${PASSWORD}" "" /tmp/aruba_auth_body.json /tmp/aruba_auth_curl_err.log 2>"${primary_err}" || true)
     if [[ -n "${primary_token}" ]]; then
       echo "${primary_token}"
@@ -150,6 +154,7 @@ acquire_api_token() {
 
   if [[ -z "${DELEGATED_USERNAME}" || -z "${DELEGATED_PASSWORD}" ]]; then
     bashio::log.warning "Delegated user abilitato ma credenziali incomplete; uso username/password principali"
+    bashio::log.info "Tentativo login Aruba con utente principale"
     primary_token=$(auth_token_for_user "${USERNAME}" "${PASSWORD}" "" /tmp/aruba_auth_body.json /tmp/aruba_auth_curl_err.log 2>"${primary_err}" || true)
     if [[ -n "${primary_token}" ]]; then
       echo "${primary_token}"
@@ -171,6 +176,7 @@ acquire_api_token() {
     return 1
   fi
 
+  bashio::log.info "Tentativo login Aruba con delegated user ${DELEGATED_USERNAME}"
   delegated_token=$(auth_token_for_user "${DELEGATED_USERNAME}" "${DELEGATED_PASSWORD}" "" /tmp/aruba_auth_delegated_body.json /tmp/aruba_auth_delegated_curl_err.log 2>/tmp/aruba_auth_delegated_err.log || true)
   if [[ -n "${delegated_token}" ]]; then
     bashio::log.info "Autenticazione API con delegated user ${DELEGATED_USERNAME}"
@@ -222,7 +228,7 @@ api_get_zone() {
   local encoded_zone
   encoded_zone=$(urlencode "${zone}")
 
-  curl -fsSL "${API_BASE%/}/api/domains/dns/${encoded_zone}/details" \
+  curl -fsSL --connect-timeout "${CURL_CONNECT_TIMEOUT}" -m "${CURL_MAX_TIME}" "${API_BASE%/}/api/domains/dns/${encoded_zone}/details" \
     -H "Authorization-Key: ${API_KEY}" \
     -H "Authorization: Bearer ${token}"
 }
@@ -231,7 +237,7 @@ api_put_record() {
   local token="$1"
   local payload="$2"
 
-  curl -fsSL -X PUT "${API_BASE%/}/api/domains/dns/record" \
+  curl -fsSL --connect-timeout "${CURL_CONNECT_TIMEOUT}" -m "${CURL_MAX_TIME}" -X PUT "${API_BASE%/}/api/domains/dns/record" \
     -H "Content-Type: application/json" \
     -H "Authorization-Key: ${API_KEY}" \
     -H "Authorization: Bearer ${token}" \
@@ -242,7 +248,7 @@ api_post_record() {
   local token="$1"
   local payload="$2"
 
-  curl -fsSL -X POST "${API_BASE%/}/api/domains/dns/record" \
+  curl -fsSL --connect-timeout "${CURL_CONNECT_TIMEOUT}" -m "${CURL_MAX_TIME}" -X POST "${API_BASE%/}/api/domains/dns/record" \
     -H "Content-Type: application/json" \
     -H "Authorization-Key: ${API_KEY}" \
     -H "Authorization: Bearer ${token}" \
@@ -256,6 +262,7 @@ api_get_delegated_user_detail() {
   encoded_username=$(urlencode "${delegated_username}")
 
   code=$(curl -sS -o /tmp/aruba_delegate_detail_body.json -w "%{http_code}" \
+    --connect-timeout "${CURL_CONNECT_TIMEOUT}" -m "${CURL_MAX_TIME}" \
     "${API_BASE%/}/api/delegatedusers/${encoded_username}/detail" \
     -H "Authorization-Key: ${API_KEY}" \
     -H "Authorization: Bearer ${token}" \
@@ -270,6 +277,7 @@ api_disable_delegated_otp() {
   local code
 
   code=$(curl -sS -o /tmp/aruba_delegate_otp_body.json -w "%{http_code}" -X PUT \
+    --connect-timeout "${CURL_CONNECT_TIMEOUT}" -m "${CURL_MAX_TIME}" \
     "${API_BASE%/}/api/delegatedusers/OTP/Disactivate" \
     -H "Content-Type: application/json" \
     -H "Authorization-Key: ${API_KEY}" \

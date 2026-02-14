@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.4.8
+
+- Aggiunti timeout HTTP alle chiamate Aruba per evitare blocchi senza log.
+- Aggiunti log di avanzamento nei tentativi login (principale/delegato).
+
 ## 0.4.7
 
 - Fix runtime config reload: ricarica `options.json` a ogni ciclo per applicare modifiche anche con Save+Restart.

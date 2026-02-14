@@ -114,7 +114,7 @@ domain_to_zone() {
         best="$candidate"
       fi
     fi
-  done < <(jq -r '[.records[].zone, (.lets_encrypt.zones[]?)] | flatten | unique[]?' "$CONFIG_PATH")
+  done < <(jq -r '[(.records[]?.zone), (.lets_encrypt.zones[]?)] | flatten | unique[]?' "$CONFIG_PATH")
 
   echo "$best"
 }

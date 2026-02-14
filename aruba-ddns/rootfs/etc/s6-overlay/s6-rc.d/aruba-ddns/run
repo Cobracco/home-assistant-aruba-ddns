@@ -393,7 +393,7 @@ update_records() {
   local auth_error=0
   declare -A seen_records=()
 
-  total=$(jq '.records | length' /data/options.json)
+  total=$(jq '(.records // []) | length' /data/options.json)
   if [[ "${total}" -eq 0 ]]; then
     bashio::log.warning "Nessun record configurato"
     return 0
@@ -408,7 +408,7 @@ update_records() {
     zone=$(jq -r ".records[${idx}].zone // \"\"" /data/options.json)
     host=$(jq -r ".records[${idx}].host // \"\"" /data/options.json)
     name=$(jq -r ".records[${idx}].name // \"\"" /data/options.json)
-    type=$(jq -r ".records[${idx}].type" /data/options.json)
+    type=$(jq -r ".records[${idx}].type // \"\"" /data/options.json)
     create_if_missing=$(jq -r ".records[${idx}].create_if_missing // true" /data/options.json)
     content=$(jq -r ".records[${idx}].content // \"\"" /data/options.json)
 

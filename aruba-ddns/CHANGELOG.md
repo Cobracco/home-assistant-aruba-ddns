@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.4.22
+
+- Hardening runtime config parsing: fallback sicuro quando `records` o campi record risultano null/mancanti durante Save+Restart.
+- Fix `domain_to_zone` hook: lettura zone da `records[]?` senza errore su configurazioni parziali.
+
 ## 0.4.21
 
 - Rimosse scritture automatiche su `/data/options.json` (normalizzazione records) per evitare interferenze con Save+Restart della UI Supervisor.

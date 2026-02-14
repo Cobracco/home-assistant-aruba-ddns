@@ -21,6 +21,9 @@ configuration:
   otp_digits:
     name: OTP Digits
     description: Number of OTP digits generated from `otp_secret` (typically 8 for Aruba OTP).
+  otp_log_generated:
+    name: Log Generated OTP
+    description: If enabled, logs the OTP value used for authentication (temporary debugging only).
   password_base64:
     name: Password is Base64
     description: Enable only if your Aruba tenant expects the password parameter already Base64 encoded. Normally keep disabled.

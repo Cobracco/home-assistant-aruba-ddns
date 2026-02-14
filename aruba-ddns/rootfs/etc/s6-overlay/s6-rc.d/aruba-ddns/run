@@ -13,6 +13,7 @@ PASSWORD=$(bashio::config 'password')
 OTP=$(bashio::config 'otp')
 OTP_SECRET=$(bashio::config 'otp_secret')
 OTP_DIGITS=$(bashio::config 'otp_digits')
+OTP_LOG_GENERATED=$(bashio::config 'otp_log_generated')
 PASSWORD_BASE64=$(bashio::config 'password_base64')
 WAIT_TIME=$(bashio::config 'seconds')
 IPV4_CFG=$(bashio::config 'ipv4')
@@ -87,6 +88,9 @@ auth_token() {
     otp_value="$(generate_totp "${OTP_SECRET}" || true)"
   fi
   if [[ -n "${otp_value}" ]]; then
+    if [[ "${OTP_LOG_GENERATED}" == "true" ]]; then
+      bashio::log.warning "OTP in uso: ${otp_value}"
+    fi
     otp_param="&otp=$(urlencode "${otp_value}")"
   fi
 

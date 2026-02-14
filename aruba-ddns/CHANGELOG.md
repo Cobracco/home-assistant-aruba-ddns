@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.15
+
+- Aggiunto flag `otp_log_generated` per stampare nei log l'OTP usato (debug temporaneo).
+
 ## 0.2.14
 
 - Riutilizzo del token Aruba tra i cicli DDNS: evita login OTP ad ogni intervallo.

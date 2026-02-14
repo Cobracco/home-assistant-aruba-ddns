@@ -16,7 +16,7 @@ generate_totp() {
 }
 
 auth_token() {
-  local api_base api_key username password otp otp_secret password_base64 password_for_auth payload otp_param code otp_value
+  local api_base api_key username password otp otp_secret otp_log_generated password_base64 password_for_auth payload otp_param code otp_value
 
   api_base=$(jq -r '.api_base' "$CONFIG_PATH")
   api_key=$(jq -r '.api_key' "$CONFIG_PATH")
@@ -24,6 +24,7 @@ auth_token() {
   password=$(jq -r '.password' "$CONFIG_PATH")
   otp=$(jq -r '.otp // ""' "$CONFIG_PATH")
   otp_secret=$(jq -r '.otp_secret // ""' "$CONFIG_PATH")
+  otp_log_generated=$(jq -r '.otp_log_generated // false' "$CONFIG_PATH")
   password_base64=$(jq -r '.password_base64 // false' "$CONFIG_PATH")
 
   password_for_auth="$password"
@@ -37,6 +38,9 @@ auth_token() {
     otp_value="$(generate_totp "$otp_secret" || true)"
   fi
   if [[ -n "$otp_value" ]]; then
+    if [[ "$otp_log_generated" == "true" ]]; then
+      echo "OTP in uso: $otp_value"
+    fi
     otp_param="&otp=$(urlencode "$otp_value")"
   fi
 

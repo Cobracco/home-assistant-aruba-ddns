@@ -21,6 +21,7 @@ password: "your-password"
 otp: ""
 otp_secret: ""
 otp_digits: 8
+otp_log_generated: false
 seconds: 300
 ipv4: ""
 ipv6: ""
@@ -72,6 +73,7 @@ http:
   - impostare `otp` manuale (priorita massima), oppure
   - impostare `otp_secret` Base32 per generazione TOTP automatica ad ogni login.
 - Se usi `otp_secret`, imposta `otp_digits` (Aruba OTP in genere usa 8 cifre).
+- Per confronto con app Aruba puoi attivare temporaneamente `otp_log_generated: true`.
 - `records` supporta più domini e più host nello stesso loop.
 - Per vedere in lista il dominio completo nella UI, compila `host` (FQDN completo).
 - `host` e obbligatorio e viene usato per la voce in lista.

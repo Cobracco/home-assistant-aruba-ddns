@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.10
+
+- Aggiornati esempi record DNS: rimosso `example.it`, ora default con terzo livello (`www.domain.tld`).
+
 ## 0.2.9
 
 - Corrette chiamate Aruba DNS API: ora inviano sia `Authorization-Key` sia `Authorization: Bearer <token>`.

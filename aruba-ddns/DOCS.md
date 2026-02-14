@@ -24,14 +24,14 @@ seconds: 300
 ipv4: ""
 ipv6: ""
 records:
-  - host: example.it
-    zone: example.it
+  - host: www.domain.tld
+    zone: domain.tld
     name: ""
     type: A
     create_if_missing: true
     content: ""
-  - host: home.example.it
-    zone: example.it
+  - host: app.domain.tld
+    zone: domain.tld
     name: ""
     type: A
     create_if_missing: true

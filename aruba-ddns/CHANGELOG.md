@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.3.0
+
+- Rimossa completamente la gestione OTP/TOTP (campi config, log e runtime).
+- Autenticazione Aruba semplificata con sola API key + username + password.
+
 ## 0.2.17
 
 - Migliorato debug OTP: log esplicito della sorgente OTP (`manual`/`otp_secret`) e warning dedicato se la generazione da `otp_secret` fallisce.

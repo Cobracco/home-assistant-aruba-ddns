@@ -10,10 +10,6 @@ API_BASE=$(bashio::config 'api_base')
 API_KEY=$(bashio::config 'api_key')
 USERNAME=$(bashio::config 'username')
 PASSWORD=$(bashio::config 'password')
-OTP=$(bashio::config 'otp')
-OTP_SECRET=$(bashio::config 'otp_secret')
-OTP_DIGITS=$(bashio::config 'otp_digits')
-OTP_LOG_GENERATED=$(bashio::config 'otp_log_generated')
 PASSWORD_BASE64=$(bashio::config 'password_base64')
 WAIT_TIME=$(bashio::config 'seconds')
 IPV4_CFG=$(bashio::config 'ipv4')
@@ -69,40 +65,16 @@ derive_zone_from_host() {
   echo "${h#*.}"
 }
 
-generate_totp() {
-  local secret="${1//[[:space:]]/}"
-  [[ -z "${secret}" ]] && return 1
-  oathtool --totp --digits "${OTP_DIGITS}" -b "${secret}" 2>/dev/null
-}
 
 auth_token() {
-  local password_for_auth payload otp_param="" code otp_value otp_source
+  local password_for_auth payload code
 
   password_for_auth="${PASSWORD}"
   if [[ "${PASSWORD_BASE64}" == "true" ]]; then
     password_for_auth=$(printf '%s' "${PASSWORD}" | base64 | tr -d '\n')
   fi
 
-  otp_value="${OTP}"
-  otp_source="manual"
-  if [[ -z "${otp_value}" ]] && [[ -n "${OTP_SECRET}" ]]; then
-    otp_value="$(generate_totp "${OTP_SECRET}" || true)"
-    otp_source="otp_secret"
-  fi
-  if [[ -z "${otp_value}" ]] && [[ -n "${OTP_SECRET}" ]] && [[ "${OTP_LOG_GENERATED}" == "true" ]]; then
-    bashio::log.warning "OTP debug: impossibile generare OTP da otp_secret (verifica secret e otp_digits)"
-  fi
-  if [[ -z "${otp_value}" ]] && [[ -z "${OTP_SECRET}" ]] && [[ "${OTP_LOG_GENERATED}" == "true" ]]; then
-    bashio::log.warning "OTP debug: nessun OTP disponibile (otp e otp_secret vuoti)"
-  fi
-  if [[ -n "${otp_value}" ]]; then
-    if [[ "${OTP_LOG_GENERATED}" == "true" ]]; then
-      bashio::log.warning "OTP debug (${otp_source}) in uso: ${otp_value}"
-    fi
-    otp_param="&otp=$(urlencode "${otp_value}")"
-  fi
-
-  payload="grant_type=password&username=$(urlencode "${USERNAME}")&password=$(urlencode "${password_for_auth}")${otp_param}"
+  payload="grant_type=password&username=$(urlencode "${USERNAME}")&password=$(urlencode "${password_for_auth}")"
 
   code=$(curl -sS -o /tmp/aruba_auth_body.json -w "%{http_code}" -X POST "${API_BASE%/}/auth/token" \
     -H "Content-Type: application/x-www-form-urlencoded" \

@@ -7,24 +7,14 @@ urlencode() {
   jq -rn --arg v "$1" '$v|@uri'
 }
 
-generate_totp() {
-  local secret="${1//[[:space:]]/}"
-  local digits
-  [[ -z "$secret" ]] && return 1
-  digits=$(jq -r '.otp_digits // 8' "$CONFIG_PATH")
-  oathtool --totp --digits "$digits" -b "$secret" 2>/dev/null
-}
 
 auth_token() {
-  local api_base api_key username password otp otp_secret otp_log_generated password_base64 password_for_auth payload otp_param code otp_value
+  local api_base api_key username password password_base64 password_for_auth payload code
 
   api_base=$(jq -r '.api_base' "$CONFIG_PATH")
   api_key=$(jq -r '.api_key' "$CONFIG_PATH")
   username=$(jq -r '.username' "$CONFIG_PATH")
   password=$(jq -r '.password' "$CONFIG_PATH")
-  otp=$(jq -r '.otp // ""' "$CONFIG_PATH")
-  otp_secret=$(jq -r '.otp_secret // ""' "$CONFIG_PATH")
-  otp_log_generated=$(jq -r '.otp_log_generated // false' "$CONFIG_PATH")
   password_base64=$(jq -r '.password_base64 // false' "$CONFIG_PATH")
 
   password_for_auth="$password"
@@ -32,19 +22,7 @@ auth_token() {
     password_for_auth=$(printf '%s' "$password" | base64 | tr -d '\n')
   fi
 
-  otp_param=""
-  otp_value="$otp"
-  if [[ -z "$otp_value" ]] && [[ -n "$otp_secret" ]]; then
-    otp_value="$(generate_totp "$otp_secret" || true)"
-  fi
-  if [[ -n "$otp_value" ]]; then
-    if [[ "$otp_log_generated" == "true" ]]; then
-      echo "OTP in uso: $otp_value"
-    fi
-    otp_param="&otp=$(urlencode "$otp_value")"
-  fi
-
-  payload="grant_type=password&username=$(urlencode "$username")&password=$(urlencode "$password_for_auth")${otp_param}"
+  payload="grant_type=password&username=$(urlencode "$username")&password=$(urlencode "$password_for_auth")"
 
   code=$(curl -sS -o /tmp/aruba_auth_body.json -w "%{http_code}" -X POST "${api_base%/}/auth/token" \
     -H "Content-Type: application/x-www-form-urlencoded" \

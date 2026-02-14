@@ -12,18 +12,6 @@ configuration:
   password:
     name: Password
     description: Password Aruba Business usata per ottenere il token di accesso.
-  otp:
-    name: OTP (opzionale)
-    description: Codice one-time se il tuo account Aruba ha 2FA attivo. Se compilato, ha priorita rispetto a OTP Secret.
-  otp_secret:
-    name: OTP Secret (TOTP)
-    description: Secret TOTP in formato Base32 usato per generare automaticamente i codici OTP ad ogni richiesta.
-  otp_digits:
-    name: Cifre OTP
-    description: Numero di cifre del codice OTP generato da `otp_secret` (tipicamente 8 per Aruba OTP).
-  otp_log_generated:
-    name: Log OTP generato
-    description: Se attivo, stampa nei log il codice OTP usato per autenticazione (solo per debug temporaneo).
   password_base64:
     name: Password in Base64
     description: Attiva solo se il tuo tenant Aruba richiede la password gia codificata Base64. Normalmente lascia disattivato.

@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.4.11
+
+- Fix hook ACME cleanup: inizializzazione variabili `fqdn_lc/rel_name` in `clean_challenge`.
+- Migliorato matching TXT challenge con nome FQDN o relativo zona.
+
 ## 0.4.10
 
 - Fix ACME DNS hook Aruba: gestione TXT challenge esistente con update (PUT) invece di create sempre.

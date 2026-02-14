@@ -123,6 +123,7 @@ deploy_challenge() {
   local domain="$1" _token_filename="$2" token_value="$3"
   local token domain_no_wildcard zone fqdn zone_data zone_id payload wait_seconds existing_same
   local existing_id existing_count
+  local zone_lc fqdn_lc rel_name matched_name
 
   domain_no_wildcard="${domain#*.}"
   if [[ "$domain" != \*.* ]]; then
@@ -137,6 +138,17 @@ deploy_challenge() {
   fi
 
   fqdn="_acme-challenge.${domain_no_wildcard}"
+  zone_lc="${zone,,}"
+  zone_lc="${zone_lc%.}"
+  fqdn_lc="${fqdn,,}"
+  fqdn_lc="${fqdn_lc%.}"
+  rel_name="${fqdn_lc}"
+  if [[ "${fqdn_lc}" == "${zone_lc}" ]]; then
+    rel_name="@"
+  elif [[ "${fqdn_lc}" == *".${zone_lc}" ]]; then
+    rel_name="${fqdn_lc%.${zone_lc}}"
+    rel_name="${rel_name%.}"
+  fi
   token=$(auth_token)
 
   zone_data=$(api_get_zone "$token" "$zone")
@@ -147,24 +159,32 @@ deploy_challenge() {
   fi
 
   existing_same=$(echo "$zone_data" | jq -r \
-    --arg n "${fqdn,,}" \
+    --arg n "${fqdn_lc}" \
+    --arg nr "${rel_name}" \
     --arg c "$token_value" \
-    '[.Records[]? | select((.Name // "" | tostring | ascii_downcase | sub("\\.$";"")) == ($n | sub("\\.$";"")) and (((.Type // "" | tostring | ascii_downcase) == "txt") or ((.Type // "" | tostring | ascii_downcase) == "5")) and ((.Content // "" | tostring) == $c))] | length')
+    '[.Records[]? | select(((((.Name // "" | tostring | ascii_downcase | sub("\\.$";"")) == ($n | sub("\\.$";""))) or (((.Name // "" | tostring | ascii_downcase | sub("\\.$";"")) == ($nr | sub("\\.$";"")))) and ((((.Type // "" | tostring | ascii_downcase) == "txt") or ((.Type // "" | tostring | ascii_downcase) == "5")) and ((.Content // "" | tostring) == $c)))] | length')
   if [[ "$existing_same" -gt 0 ]]; then
     return 0
   fi
 
   existing_id=$(echo "$zone_data" | jq -r \
-    --arg n "${fqdn,,}" \
-    '[.Records[]? | select((.Name // "" | tostring | ascii_downcase | sub("\\.$";"")) == ($n | sub("\\.$";"")) and (((.Type // "" | tostring | ascii_downcase) == "txt") or ((.Type // "" | tostring | ascii_downcase) == "5"))) | .Id] | first // empty')
+    --arg n "${fqdn_lc}" \
+    --arg nr "${rel_name}" \
+    '[.Records[]? | select(((((.Name // "" | tostring | ascii_downcase | sub("\\.$";"")) == ($n | sub("\\.$";""))) or (((.Name // "" | tostring | ascii_downcase | sub("\\.$";"")) == ($nr | sub("\\.$";"")))) and (((.Type // "" | tostring | ascii_downcase) == "txt") or ((.Type // "" | tostring | ascii_downcase) == "5"))) | .Id] | first // empty')
+  matched_name=$(echo "$zone_data" | jq -r \
+    --arg n "${fqdn_lc}" \
+    --arg nr "${rel_name}" \
+    '[.Records[]? | select(((((.Name // "" | tostring | ascii_downcase | sub("\\.$";"")) == ($n | sub("\\.$";""))) or (((.Name // "" | tostring | ascii_downcase | sub("\\.$";"")) == ($nr | sub("\\.$";"")))) and (((.Type // "" | tostring | ascii_downcase) == "txt") or ((.Type // "" | tostring | ascii_downcase) == "5"))) | .Name] | first // empty')
   existing_count=$(echo "$zone_data" | jq -r \
-    --arg n "${fqdn,,}" \
-    '[.Records[]? | select((.Name // "" | tostring | ascii_downcase | sub("\\.$";"")) == ($n | sub("\\.$";"")) and (((.Type // "" | tostring | ascii_downcase) == "txt") or ((.Type // "" | tostring | ascii_downcase) == "5")))] | length')
+    --arg n "${fqdn_lc}" \
+    --arg nr "${rel_name}" \
+    '[.Records[]? | select(((((.Name // "" | tostring | ascii_downcase | sub("\\.$";"")) == ($n | sub("\\.$";""))) or (((.Name // "" | tostring | ascii_downcase | sub("\\.$";"")) == ($nr | sub("\\.$";"")))) and (((.Type // "" | tostring | ascii_downcase) == "txt") or ((.Type // "" | tostring | ascii_downcase) == "5")))] | length')
 
   if [[ -n "$existing_id" && "$existing_id" != "null" ]]; then
+    [[ -z "$matched_name" || "$matched_name" == "null" ]] && matched_name="$fqdn"
     payload=$(jq -nc \
       --argjson id "$existing_id" \
-      --arg name "$fqdn" \
+      --arg name "$matched_name" \
       --arg content "$token_value" \
       '{IdRecord: $id, Name: $name, Content: $content}')
     if ! api_put_record "$token" "$payload" >/tmp/aruba_hook_put_ok.log 2>/tmp/aruba_hook_put_err.log; then
@@ -180,8 +200,16 @@ deploy_challenge() {
     '{IdDomain: $idDomain, Type: $typeVal, Name: $name, Content: $content}')
 
     if ! api_post_record "$token" "$payload" >/tmp/aruba_hook_post_ok.log 2>/tmp/aruba_hook_post_err.log; then
-      echo "deploy_challenge create TXT failed: $(cat /tmp/aruba_hook_post_err.log)" >&2
-      return 1
+      payload=$(jq -nc \
+        --argjson idDomain "$zone_id" \
+        --arg typeVal "tXT" \
+        --arg name "$rel_name" \
+        --arg content "$token_value" \
+        '{IdDomain: $idDomain, Type: $typeVal, Name: $name, Content: $content}')
+      if ! api_post_record "$token" "$payload" >/tmp/aruba_hook_post_ok.log 2>/tmp/aruba_hook_post_err.log; then
+        echo "deploy_challenge create TXT failed (fqdn=${fqdn}, relative=${rel_name}): $(cat /tmp/aruba_hook_post_err.log)" >&2
+        return 1
+      fi
     fi
   fi
 
@@ -196,6 +224,7 @@ deploy_challenge() {
 clean_challenge() {
   local domain="$1" _token_filename="$2" token_value="$3"
   local token domain_no_wildcard zone fqdn zone_data ids id
+  local zone_lc fqdn_lc rel_name
 
   domain_no_wildcard="${domain#*.}"
   if [[ "$domain" != \*.* ]]; then
@@ -207,13 +236,25 @@ clean_challenge() {
   [[ -z "$zone" ]] && return 0
 
   fqdn="_acme-challenge.${domain_no_wildcard}"
+  zone_lc="${zone,,}"
+  zone_lc="${zone_lc%.}"
+  fqdn_lc="${fqdn,,}"
+  fqdn_lc="${fqdn_lc%.}"
+  rel_name="${fqdn_lc}"
+  if [[ "${fqdn_lc}" == "${zone_lc}" ]]; then
+    rel_name="@"
+  elif [[ "${fqdn_lc}" == *".${zone_lc}" ]]; then
+    rel_name="${fqdn_lc%.${zone_lc}}"
+    rel_name="${rel_name%.}"
+  fi
   token=$(auth_token)
 
   zone_data=$(api_get_zone "$token" "$zone")
   ids=$(echo "$zone_data" | jq -r \
-    --arg n "${fqdn,,}" \
+    --arg n "${fqdn_lc}" \
+    --arg nr "${rel_name}" \
     --arg c "$token_value" \
-    '[.Records[]? | select((.Name // "" | tostring | ascii_downcase | sub("\\.$";"")) == ($n | sub("\\.$";"")) and ((((.Type // "" | tostring | ascii_downcase) == "txt") or ((.Type // "" | tostring | ascii_downcase) == "5")) and ((.Content // "" | tostring) == $c))) | .Id] | .[]?')
+    '[.Records[]? | select(((((.Name // "" | tostring | ascii_downcase | sub("\\.$";"")) == ($n | sub("\\.$";""))) or (((.Name // "" | tostring | ascii_downcase | sub("\\.$";"")) == ($nr | sub("\\.$";"")))) and ((((.Type // "" | tostring | ascii_downcase) == "txt") or ((.Type // "" | tostring | ascii_downcase) == "5")) and ((.Content // "" | tostring) == $c))) | .Id] | .[]?')
 
   while IFS= read -r id; do
     [[ -z "$id" ]] && continue

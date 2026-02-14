@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.17
+
+- Migliorato debug OTP: log esplicito della sorgente OTP (`manual`/`otp_secret`) e warning dedicato se la generazione da `otp_secret` fallisce.
+
 ## 0.2.16
 
 - Fix salvataggio modifiche record DNS dalla UI Home Assistant: schema reso tollerante a stringhe vuote durante edit (`host`, `zone`, `name`, `content`).

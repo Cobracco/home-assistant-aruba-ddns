@@ -76,7 +76,7 @@ generate_totp() {
 }
 
 auth_token() {
-  local password_for_auth payload otp_param="" code otp_value
+  local password_for_auth payload otp_param="" code otp_value otp_source
 
   password_for_auth="${PASSWORD}"
   if [[ "${PASSWORD_BASE64}" == "true" ]]; then
@@ -84,12 +84,20 @@ auth_token() {
   fi
 
   otp_value="${OTP}"
+  otp_source="manual"
   if [[ -z "${otp_value}" ]] && [[ -n "${OTP_SECRET}" ]]; then
     otp_value="$(generate_totp "${OTP_SECRET}" || true)"
+    otp_source="otp_secret"
+  fi
+  if [[ -z "${otp_value}" ]] && [[ -n "${OTP_SECRET}" ]] && [[ "${OTP_LOG_GENERATED}" == "true" ]]; then
+    bashio::log.warning "OTP debug: impossibile generare OTP da otp_secret (verifica secret e otp_digits)"
+  fi
+  if [[ -z "${otp_value}" ]] && [[ -z "${OTP_SECRET}" ]] && [[ "${OTP_LOG_GENERATED}" == "true" ]]; then
+    bashio::log.warning "OTP debug: nessun OTP disponibile (otp e otp_secret vuoti)"
   fi
   if [[ -n "${otp_value}" ]]; then
     if [[ "${OTP_LOG_GENERATED}" == "true" ]]; then
-      bashio::log.warning "OTP in uso: ${otp_value}"
+      bashio::log.warning "OTP debug (${otp_source}) in uso: ${otp_value}"
     fi
     otp_param="&otp=$(urlencode "${otp_value}")"
   fi

@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.4.9
+
+- Migliorati log Let's Encrypt: stato abilitazione config, avvio rinnovo e risultato finale.
+- Rimosso silenziamento completo errori `dehydrated`: ora logga exit code in caso di failure.
+
 ## 0.4.8
 
 - Aggiunti timeout HTTP alle chiamate Aruba per evitare blocchi senza log.

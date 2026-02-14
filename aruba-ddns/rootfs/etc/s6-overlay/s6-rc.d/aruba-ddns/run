@@ -336,6 +336,7 @@ ensure_delegated_user_no_otp() {
 le_renew() {
   local domain_args=()
   local domain
+  local rc=0
 
   while IFS= read -r domain; do
     [[ -z "${domain}" || "${domain}" == "null" ]] && continue
@@ -348,10 +349,16 @@ le_renew() {
     return 0
   fi
 
-  bashio::log.info "Rinnovo certificati Let's Encrypt"
+  bashio::log.info "Rinnovo certificati Let's Encrypt (domains=${#domain_args[@]}/2, algo=${ALGO})"
   dehydrated --cron --separate-challenges --algo "${ALGO}" \
     --hook /root/hooks.sh --challenge dns-01 \
-    "${domain_args[@]}" --out "${CERT_DIR}" --config "${WORK_DIR}/config" || true
+    "${domain_args[@]}" --out "${CERT_DIR}" --config "${WORK_DIR}/config" || rc=$?
+
+  if [[ "${rc}" -ne 0 ]]; then
+    bashio::log.warning "Rinnovo Let's Encrypt terminato con errore (exit=${rc})"
+  else
+    bashio::log.info "Rinnovo Let's Encrypt completato"
+  fi
 
   LE_UPDATE="$(date +%s)"
 }
@@ -527,6 +534,7 @@ load_runtime_config
 
 if bashio::config.true 'lets_encrypt.accept_terms'; then
   mkdir -p "${CERT_DIR}" "${WORK_DIR}"
+  bashio::log.info "Let's Encrypt abilitato in configurazione"
 
   if [[ -e "${WORK_DIR}/lock" ]]; then
     rm -f "${WORK_DIR}/lock"
@@ -540,6 +548,8 @@ if bashio::config.true 'lets_encrypt.accept_terms'; then
   if [[ ! -d "${CERT_DIR}/accounts" ]]; then
     dehydrated --register --accept-terms --config "${WORK_DIR}/config" || true
   fi
+else
+  bashio::log.info "Let's Encrypt disabilitato in configurazione (lets_encrypt.accept_terms=false)"
 fi
 
 bashio::log.info "Starting Aruba DDNS"

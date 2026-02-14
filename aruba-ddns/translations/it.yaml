@@ -21,7 +21,8 @@ configuration:
       Gestione utente delegato Aruba gia creato da pannello Aruba.
       Se `enabled` e attivo e `username` + `password` sono valorizzati, l'add-on usa
       queste credenziali per autenticarsi e verifica l'utente;
-      e prova a disattivare OTP via API.
+      se Aruba richiede OTP al primo accesso usa `first_access_otp` (one-shot)
+      per fare bootstrap, disattivare OTP sul delegato e poi passare al login delegato normale.
   seconds:
     name: Intervallo aggiornamento (secondi)
     description: Secondi tra un ciclo DDNS e il successivo controllo rinnovo certificati.

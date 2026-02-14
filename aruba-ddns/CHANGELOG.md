@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.4.4
+
+- Aggiunto `delegated_user.first_access_otp` per bootstrap OTP one-shot.
+- Nuovo flusso auth: tenta login delegato; se Aruba richiede OTP al primo accesso, usa OTP principale per disattivare OTP del delegato e ritenta login delegato.
+
 ## 0.4.3
 
 - Aggiunto campo `delegated_user.password` in configurazione.

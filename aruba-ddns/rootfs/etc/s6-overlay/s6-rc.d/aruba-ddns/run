@@ -14,22 +14,12 @@ PASSWORD_BASE64=$(bashio::config 'password_base64')
 DELEGATED_ENABLED=$(bashio::config 'delegated_user.enabled')
 DELEGATED_USERNAME=$(bashio::config 'delegated_user.username')
 DELEGATED_PASSWORD=$(bashio::config 'delegated_user.password')
+DELEGATED_FIRST_ACCESS_OTP=$(bashio::config 'delegated_user.first_access_otp')
 WAIT_TIME=$(bashio::config 'seconds')
 IPV4_CFG=$(bashio::config 'ipv4')
 IPV6_CFG=$(bashio::config 'ipv6')
 ALGO=$(bashio::config 'lets_encrypt.algo')
 API_TOKEN=""
-DELEGATED_BOOTSTRAP_DONE="0"
-AUTH_USERNAME="${USERNAME}"
-AUTH_PASSWORD="${PASSWORD}"
-
-if [[ "${DELEGATED_ENABLED}" == "true" && -n "${DELEGATED_USERNAME}" && -n "${DELEGATED_PASSWORD}" ]]; then
-  AUTH_USERNAME="${DELEGATED_USERNAME}"
-  AUTH_PASSWORD="${DELEGATED_PASSWORD}"
-  bashio::log.info "Autenticazione API con delegated user ${AUTH_USERNAME}"
-elif [[ "${DELEGATED_ENABLED}" == "true" ]]; then
-  bashio::log.warning "Delegated user abilitato ma credenziali incomplete; uso username/password principali"
-fi
 
 urlencode() {
   jq -rn --arg v "$1" '$v|@uri'
@@ -80,27 +70,85 @@ derive_zone_from_host() {
 }
 
 
-auth_token() {
+auth_token_for_user() {
+  local auth_username="$1"
+  local auth_password="$2"
+  local auth_otp="$3"
+  local body_file="$4"
+  local err_file="$5"
   local password_for_auth payload code
 
-  password_for_auth="${AUTH_PASSWORD}"
+  password_for_auth="${auth_password}"
   if [[ "${PASSWORD_BASE64}" == "true" ]]; then
-    password_for_auth=$(printf '%s' "${AUTH_PASSWORD}" | base64 | tr -d '\n')
+    password_for_auth=$(printf '%s' "${auth_password}" | base64 | tr -d '\n')
   fi
 
-  payload="grant_type=password&username=$(urlencode "${AUTH_USERNAME}")&password=$(urlencode "${password_for_auth}")"
+  payload="grant_type=password&username=$(urlencode "${auth_username}")&password=$(urlencode "${password_for_auth}")"
+  if [[ -n "${auth_otp}" ]]; then
+    payload="${payload}&otp=$(urlencode "${auth_otp}")"
+  fi
 
-  code=$(curl -sS -o /tmp/aruba_auth_body.json -w "%{http_code}" -X POST "${API_BASE%/}/auth/token" \
+  code=$(curl -sS -o "${body_file}" -w "%{http_code}" -X POST "${API_BASE%/}/auth/token" \
     -H "Content-Type: application/x-www-form-urlencoded" \
     -H "Authorization-Key: ${API_KEY}" \
-    --data "${payload}" 2>/tmp/aruba_auth_err.log || true)
+    --data "${payload}" 2>"${err_file}" || true)
 
   if [[ "${code}" != "200" ]]; then
-    echo "HTTP ${code}; $(jq -r '.error_description // .error // .Message // .message // "auth failed"' /tmp/aruba_auth_body.json 2>/dev/null || cat /tmp/aruba_auth_err.log)" >&2
+    echo "HTTP ${code}; $(jq -r '.error_description // .error // .Message // .message // "auth failed"' "${body_file}" 2>/dev/null || cat "${err_file}")" >&2
     return 1
   fi
 
-  jq -r '.access_token // empty' /tmp/aruba_auth_body.json
+  jq -r '.access_token // empty' "${body_file}"
+}
+
+acquire_api_token() {
+  local delegated_token primary_token
+
+  if [[ "${DELEGATED_ENABLED}" != "true" ]]; then
+    auth_token_for_user "${USERNAME}" "${PASSWORD}" "" /tmp/aruba_auth_body.json /tmp/aruba_auth_curl_err.log
+    return $?
+  fi
+
+  if [[ -z "${DELEGATED_USERNAME}" || -z "${DELEGATED_PASSWORD}" ]]; then
+    bashio::log.warning "Delegated user abilitato ma credenziali incomplete; uso username/password principali"
+    auth_token_for_user "${USERNAME}" "${PASSWORD}" "" /tmp/aruba_auth_body.json /tmp/aruba_auth_curl_err.log
+    return $?
+  fi
+
+  delegated_token=$(auth_token_for_user "${DELEGATED_USERNAME}" "${DELEGATED_PASSWORD}" "" /tmp/aruba_auth_delegated_body.json /tmp/aruba_auth_delegated_curl_err.log 2>/tmp/aruba_auth_delegated_err.log || true)
+  if [[ -n "${delegated_token}" ]]; then
+    bashio::log.info "Autenticazione API con delegated user ${DELEGATED_USERNAME}"
+    echo "${delegated_token}"
+    return 0
+  fi
+
+  if ! grep -qi "one-time password required" /tmp/aruba_auth_delegated_err.log 2>/dev/null; then
+    cat /tmp/aruba_auth_delegated_err.log >&2
+    return 1
+  fi
+
+  if [[ -z "${DELEGATED_FIRST_ACCESS_OTP}" ]]; then
+    echo "HTTP 401; One-time password required per delegated user. Compila delegated_user.first_access_otp per bootstrap iniziale." >&2
+    return 1
+  fi
+
+  bashio::log.warning "OTP richiesto sul delegated user: avvio bootstrap con utente principale e OTP one-shot"
+  primary_token=$(auth_token_for_user "${USERNAME}" "${PASSWORD}" "${DELEGATED_FIRST_ACCESS_OTP}" /tmp/aruba_auth_primary_otp_body.json /tmp/aruba_auth_primary_otp_curl_err.log 2>/tmp/aruba_auth_primary_otp_err.log || true)
+  if [[ -z "${primary_token}" ]]; then
+    cat /tmp/aruba_auth_primary_otp_err.log >&2
+    return 1
+  fi
+
+  ensure_delegated_user_no_otp "${primary_token}" || true
+
+  delegated_token=$(auth_token_for_user "${DELEGATED_USERNAME}" "${DELEGATED_PASSWORD}" "" /tmp/aruba_auth_delegated_retry_body.json /tmp/aruba_auth_delegated_retry_curl_err.log 2>/tmp/aruba_auth_delegated_retry_err.log || true)
+  if [[ -z "${delegated_token}" ]]; then
+    cat /tmp/aruba_auth_delegated_retry_err.log >&2
+    return 1
+  fi
+
+  bashio::log.info "Bootstrap OTP completato: autenticazione ora su delegated user ${DELEGATED_USERNAME}"
+  echo "${delegated_token}"
 }
 
 api_get_zone() {
@@ -422,18 +470,13 @@ fi
 bashio::log.info "Starting Aruba DDNS"
 while true; do
   if [[ -z "${API_TOKEN}" ]]; then
-    API_TOKEN=$(auth_token 2>/tmp/aruba_auth_err.log || true)
+    API_TOKEN=$(acquire_api_token 2>/tmp/aruba_auth_err.log || true)
 
     if [[ -z "${API_TOKEN}" ]]; then
       bashio::log.error "Autenticazione Aruba fallita: $(cat /tmp/aruba_auth_err.log)"
       sleep "${WAIT_TIME}"
       continue
     fi
-  fi
-
-  if [[ "${DELEGATED_BOOTSTRAP_DONE}" != "1" ]]; then
-    ensure_delegated_user_no_otp "${API_TOKEN}"
-    DELEGATED_BOOTSTRAP_DONE="1"
   fi
 
   ipv4=$(resolve_ip "${IPV4_CFG}")

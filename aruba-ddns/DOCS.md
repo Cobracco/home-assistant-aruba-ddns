@@ -22,6 +22,7 @@ delegated_user:
   enabled: true
   username: "clientcode.ha"
   password: "delegated-password"
+  first_access_otp: "12345678"
 seconds: 300
 ipv4: ""
 ipv6: ""
@@ -76,6 +77,10 @@ http:
   - verifica che `delegated_user.username` esista
   - prova a disattivare OTP su quel delegated user (`PUT /api/delegatedusers/OTP/Disactivate`)
 - Se `delegated_user.enabled=true` ma password mancante, usa fallback alle credenziali principali (`username`/`password`).
+- Se al primo login del delegato Aruba risponde `One-time password required`, imposta temporaneamente
+  `delegated_user.first_access_otp` (OTP account principale): l'add-on fa bootstrap,
+  disattiva OTP del delegato e poi passa automaticamente al login con delegato.
+- Dopo bootstrap riuscito, svuota `delegated_user.first_access_otp`.
 - Per vedere in lista il dominio completo nella UI, compila `host` (FQDN completo).
 - `host` e obbligatorio e viene usato per la voce in lista.
 - Se `host` e compilato, il valore di `name` viene ignorato.

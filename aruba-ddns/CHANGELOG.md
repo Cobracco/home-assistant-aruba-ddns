@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.13
+
+- Aggiunta auto-correzione record DNS quando UI salva `zone` come etichetta host (es. `zone=casa`, `host=brachini.com`).
+- Ridotti errori di configurazione persistita non coerente nei record.
+
 ## 0.2.12
 
 - Aggiunto supporto configurabile cifre OTP (`otp_digits`) per TOTP automatico da `otp_secret`.

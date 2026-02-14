@@ -192,6 +192,11 @@ update_records() {
       full_name="${host%.}"
       if [[ -z "${zone}" ]]; then
         zone="$(derive_zone_from_host "${full_name}" || true)"
+      elif [[ "${zone}" != *.* ]]; then
+        # Some UI saves can leave zone as a host label (e.g. zone=casa, host=brachini.com).
+        # Auto-correct to full host "casa.brachini.com" and derive proper zone.
+        full_name="${zone}.${full_name}"
+        zone="$(derive_zone_from_host "${full_name}" || true)"
       fi
     else
       full_name=$(normalize_record_name "${zone}" "${name}")

@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.4.16
+
+- Fix schema configurazione: `records[].content` reso opzionale (`str?`) per evitare errore "Missing option content" al salvataggio.
+
 ## 0.4.15
 
 - Aggiunti log dettagliati nei hook ACME (`deploy_challenge`/`clean_challenge`) per mostrare stato reale durante attese di propagazione DNS.

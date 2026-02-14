@@ -18,6 +18,7 @@ WAIT_TIME=$(bashio::config 'seconds')
 IPV4_CFG=$(bashio::config 'ipv4')
 IPV6_CFG=$(bashio::config 'ipv6')
 ALGO=$(bashio::config 'lets_encrypt.algo')
+API_TOKEN=""
 
 urlencode() {
   jq -rn --arg v "$1" '$v|@uri'
@@ -165,6 +166,7 @@ update_records() {
   local current_ipv4="$2"
   local current_ipv6="$3"
   local total
+  local auth_error=0
 
   total=$(jq '.records | length' /data/options.json)
   if [[ "${total}" -eq 0 ]]; then
@@ -227,6 +229,9 @@ update_records() {
 
     if ! zone_data=$(api_get_zone "${token}" "${zone}" 2>/tmp/aruba_zone_err.log); then
       bashio::log.warning "Record ${full_name}: errore lettura zona ${zone}: $(cat /tmp/aruba_zone_err.log)"
+      if grep -q "401" /tmp/aruba_zone_err.log; then
+        auth_error=1
+      fi
       continue
     fi
 
@@ -282,6 +287,10 @@ update_records() {
       bashio::log.warning "Errore create ${full_name}: $(cat /tmp/aruba_post_err.log)"
     fi
   done
+
+  if [[ "${auth_error}" -eq 1 ]]; then
+    return 2
+  fi
 }
 
 if bashio::config.true 'lets_encrypt.accept_terms'; then
@@ -303,13 +312,14 @@ fi
 
 bashio::log.info "Starting Aruba DDNS"
 while true; do
-  token=""
-  token=$(auth_token 2>/tmp/aruba_auth_err.log || true)
+  if [[ -z "${API_TOKEN}" ]]; then
+    API_TOKEN=$(auth_token 2>/tmp/aruba_auth_err.log || true)
 
-  if [[ -z "${token}" ]]; then
-    bashio::log.error "Autenticazione Aruba fallita: $(cat /tmp/aruba_auth_err.log)"
-    sleep "${WAIT_TIME}"
-    continue
+    if [[ -z "${API_TOKEN}" ]]; then
+      bashio::log.error "Autenticazione Aruba fallita: $(cat /tmp/aruba_auth_err.log)"
+      sleep "${WAIT_TIME}"
+      continue
+    fi
   fi
 
   ipv4=$(resolve_ip "${IPV4_CFG}")
@@ -323,7 +333,12 @@ while true; do
     ipv6=$(curl -fsSL -m 10 https://api6.ipify.org || true)
   fi
 
-  update_records "${token}" "${ipv4}" "${ipv6}"
+  rc=0
+  update_records "${API_TOKEN}" "${ipv4}" "${ipv6}" || rc=$?
+  if [[ "${rc}" -eq 2 ]]; then
+    bashio::log.warning "Token Aruba non valido/scaduto; nuovo login richiesto al prossimo ciclo"
+    API_TOKEN=""
+  fi
 
   now="$(date +%s)"
   if bashio::config.true 'lets_encrypt.accept_terms' && [[ $((now - LE_UPDATE)) -ge 43200 ]]; then

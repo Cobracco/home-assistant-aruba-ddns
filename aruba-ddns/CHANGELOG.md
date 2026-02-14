@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.14
+
+- Riutilizzo del token Aruba tra i cicli DDNS: evita login OTP ad ogni intervallo.
+- Aggiunta gestione token scaduto (401): reset token e nuovo login al ciclo successivo.
+
 ## 0.2.13
 
 - Aggiunta auto-correzione record DNS quando UI salva `zone` come etichetta host (es. `zone=casa`, `host=brachini.com`).

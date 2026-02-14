@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.4.6
+
+- Fix bootstrap OTP: prima prova `first_access_otp` sul delegated user, poi fallback su utente principale.
+
 ## 0.4.5
 
 - Fix auth OTP: retry automatico con `delegated_user.first_access_otp` anche per login utente principale (quando delegato non configurato o incompleto).

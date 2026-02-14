@@ -172,7 +172,16 @@ acquire_api_token() {
     return 1
   fi
 
-  bashio::log.warning "OTP richiesto sul delegated user: avvio bootstrap con utente principale e OTP one-shot"
+  bashio::log.warning "OTP richiesto sul delegated user: provo first_access_otp sul delegato"
+  delegated_token=$(auth_token_for_user "${DELEGATED_USERNAME}" "${DELEGATED_PASSWORD}" "${DELEGATED_FIRST_ACCESS_OTP}" /tmp/aruba_auth_delegated_otp_body.json /tmp/aruba_auth_delegated_otp_curl_err.log 2>/tmp/aruba_auth_delegated_otp_err.log || true)
+  if [[ -n "${delegated_token}" ]]; then
+    ensure_delegated_user_no_otp "${delegated_token}" || true
+    bashio::log.info "Bootstrap OTP completato con delegated user ${DELEGATED_USERNAME}"
+    echo "${delegated_token}"
+    return 0
+  fi
+
+  bashio::log.warning "OTP delegato non valido o non accettato: provo bootstrap con utente principale"
   primary_token=$(auth_token_for_user "${USERNAME}" "${PASSWORD}" "${DELEGATED_FIRST_ACCESS_OTP}" /tmp/aruba_auth_primary_otp_body.json /tmp/aruba_auth_primary_otp_curl_err.log 2>/tmp/aruba_auth_primary_otp_err.log || true)
   if [[ -z "${primary_token}" ]]; then
     cat /tmp/aruba_auth_primary_otp_err.log >&2

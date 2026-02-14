@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.4.18
+
+- Aggiunta normalizzazione automatica `records` in `/data/options.json`: reinserisce campi mancanti (`name` incluso) con default sicuri.
+- Evita fallimenti runtime quando la UI omette chiavi su record successivi della lista.
+
 ## 0.4.17
 
 - Fix schema records: `host`, `zone`, `name`, `content` resi opzionali per compatibilita con editor UI Home Assistant.

@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.4.12
+
+- Mitigazione race Save+Restart: attesa sincronizzazione `options.json` all'avvio prima di caricare la configurazione runtime.
+- Migliora affidabilita applicazione modifiche config quando si riavvia subito dopo Salva.
+
 ## 0.4.11
 
 - Fix hook ACME cleanup: inizializzazione variabili `fqdn_lc/rel_name` in `clean_challenge`.

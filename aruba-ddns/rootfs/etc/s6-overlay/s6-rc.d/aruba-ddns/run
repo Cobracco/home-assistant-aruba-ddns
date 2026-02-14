@@ -23,6 +23,28 @@ API_TOKEN=""
 CURL_CONNECT_TIMEOUT=10
 CURL_MAX_TIME=20
 
+wait_for_options_sync() {
+  local last_json=""
+  local current_json=""
+  local stable_count=0
+  local i
+
+  for i in $(seq 1 20); do
+    current_json=$(jq -cS . /data/options.json 2>/dev/null || true)
+    if [[ -n "${current_json}" && "${current_json}" == "${last_json}" ]]; then
+      stable_count=$((stable_count + 1))
+    else
+      stable_count=0
+      last_json="${current_json}"
+    fi
+
+    if [[ "${stable_count}" -ge 2 ]]; then
+      return 0
+    fi
+    sleep 0.5
+  done
+}
+
 load_runtime_config() {
   API_BASE=$(bashio::config 'api_base')
   API_KEY=$(bashio::config 'api_key')
@@ -530,6 +552,10 @@ update_records() {
   fi
 }
 
+load_runtime_config
+
+bashio::log.info "Attendo sincronizzazione configurazione Supervisor"
+wait_for_options_sync
 load_runtime_config
 
 if bashio::config.true 'lets_encrypt.accept_terms'; then

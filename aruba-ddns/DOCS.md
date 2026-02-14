@@ -19,6 +19,7 @@ api_key: "YOUR_ARUBA_API_KEY"
 username: "your-user"
 password: "your-password"
 otp: ""
+otp_secret: ""
 seconds: 300
 ipv4: ""
 ipv6: ""
@@ -64,6 +65,9 @@ http:
 
 ## Note operative
 
+- Se 2FA Aruba e attiva, puoi:
+  - impostare `otp` manuale (priorita massima), oppure
+  - impostare `otp_secret` Base32 per generazione TOTP automatica ad ogni login.
 - `records` supporta più domini e più host nello stesso loop.
 - Se `content` è vuoto:
   - per record `A`, usa IPv4 pubblico (auto-detect con ipify)

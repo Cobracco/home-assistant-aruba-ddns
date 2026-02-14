@@ -14,7 +14,10 @@ configuration:
     description: Aruba Business password used to request an access token.
   otp:
     name: OTP (optional)
-    description: One-time password if your Aruba account has 2FA enabled.
+    description: One-time password if your Aruba account has 2FA enabled. If set, it has priority over OTP Secret.
+  otp_secret:
+    name: OTP Secret (TOTP)
+    description: Base32 TOTP secret used to generate OTP codes automatically at runtime.
   password_base64:
     name: Password is Base64
     description: Enable only if your Aruba tenant expects the password parameter already Base64 encoded. Normally keep disabled.

@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.7
+
+- Aggiunto supporto TOTP automatico via `otp_secret` (Base32) per autenticazione Aruba con 2FA.
+- Installato `oathtool` nel container per generazione OTP runtime.
+- Aggiornati help UI e documentazione per i nuovi campi OTP.
+
 ## 0.2.6
 
 - Aggiunti help interattivi UI per tutti i campi configurazione (`translations/en.yaml` e `translations/it.yaml`).

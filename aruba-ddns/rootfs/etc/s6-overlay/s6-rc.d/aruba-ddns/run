@@ -11,6 +11,7 @@ API_KEY=$(bashio::config 'api_key')
 USERNAME=$(bashio::config 'username')
 PASSWORD=$(bashio::config 'password')
 OTP=$(bashio::config 'otp')
+OTP_SECRET=$(bashio::config 'otp_secret')
 PASSWORD_BASE64=$(bashio::config 'password_base64')
 WAIT_TIME=$(bashio::config 'seconds')
 IPV4_CFG=$(bashio::config 'ipv4')
@@ -55,16 +56,26 @@ normalize_record_name() {
   fi
 }
 
+generate_totp() {
+  local secret="${1//[[:space:]]/}"
+  [[ -z "${secret}" ]] && return 1
+  oathtool --totp -b "${secret}" 2>/dev/null
+}
+
 auth_token() {
-  local password_for_auth payload otp_param="" code
+  local password_for_auth payload otp_param="" code otp_value
 
   password_for_auth="${PASSWORD}"
   if [[ "${PASSWORD_BASE64}" == "true" ]]; then
     password_for_auth=$(printf '%s' "${PASSWORD}" | base64 | tr -d '\n')
   fi
 
-  if [[ -n "${OTP}" ]]; then
-    otp_param="&otp=$(urlencode "${OTP}")"
+  otp_value="${OTP}"
+  if [[ -z "${otp_value}" ]] && [[ -n "${OTP_SECRET}" ]]; then
+    otp_value="$(generate_totp "${OTP_SECRET}" || true)"
+  fi
+  if [[ -n "${otp_value}" ]]; then
+    otp_param="&otp=$(urlencode "${otp_value}")"
   fi
 
   payload="grant_type=password&username=$(urlencode "${USERNAME}")&password=$(urlencode "${password_for_auth}")${otp_param}"

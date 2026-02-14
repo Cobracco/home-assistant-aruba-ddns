@@ -10,12 +10,21 @@ urlencode() {
 
 auth_token() {
   local api_base api_key username password password_base64 password_for_auth payload code
+  local delegated_enabled delegated_username delegated_password
 
   api_base=$(jq -r '.api_base' "$CONFIG_PATH")
   api_key=$(jq -r '.api_key' "$CONFIG_PATH")
   username=$(jq -r '.username' "$CONFIG_PATH")
   password=$(jq -r '.password' "$CONFIG_PATH")
   password_base64=$(jq -r '.password_base64 // false' "$CONFIG_PATH")
+  delegated_enabled=$(jq -r '.delegated_user.enabled // false' "$CONFIG_PATH")
+  delegated_username=$(jq -r '.delegated_user.username // ""' "$CONFIG_PATH")
+  delegated_password=$(jq -r '.delegated_user.password // ""' "$CONFIG_PATH")
+
+  if [[ "$delegated_enabled" == "true" && -n "$delegated_username" && -n "$delegated_password" ]]; then
+    username="$delegated_username"
+    password="$delegated_password"
+  fi
 
   password_for_auth="$password"
   if [[ "$password_base64" == "true" ]]; then

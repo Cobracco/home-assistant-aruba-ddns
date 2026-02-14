@@ -19,7 +19,8 @@ configuration:
     name: Utente delegato
     description: >-
       Gestione utente delegato Aruba gia creato da pannello Aruba.
-      Se `enabled` e attivo e `username` e valorizzato, l'add-on verifica l'utente
+      Se `enabled` e attivo e `username` + `password` sono valorizzati, l'add-on usa
+      queste credenziali per autenticarsi e verifica l'utente;
       e prova a disattivare OTP via API.
   seconds:
     name: Intervallo aggiornamento (secondi)

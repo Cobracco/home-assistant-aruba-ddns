@@ -21,6 +21,7 @@ password: "your-password"
 delegated_user:
   enabled: true
   username: "clientcode.ha"
+  password: "delegated-password"
 seconds: 300
 ipv4: ""
 ipv6: ""
@@ -71,8 +72,10 @@ http:
 - `records` supporta più domini e più host nello stesso loop.
 - `delegated_user` non crea account: crea tu l'utente dal pannello Aruba.
 - Se `delegated_user.enabled=true`, l'add-on:
+  - usa `delegated_user.username` + `delegated_user.password` per il login API Aruba
   - verifica che `delegated_user.username` esista
   - prova a disattivare OTP su quel delegated user (`PUT /api/delegatedusers/OTP/Disactivate`)
+- Se `delegated_user.enabled=true` ma password mancante, usa fallback alle credenziali principali (`username`/`password`).
 - Per vedere in lista il dominio completo nella UI, compila `host` (FQDN completo).
 - `host` e obbligatorio e viene usato per la voce in lista.
 - Se `host` e compilato, il valore di `name` viene ignorato.

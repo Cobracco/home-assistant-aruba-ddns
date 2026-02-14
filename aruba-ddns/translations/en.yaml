@@ -19,7 +19,8 @@ configuration:
     name: Delegated user
     description: >-
       Aruba delegated-user management for an account already created in Aruba panel.
-      If `enabled` is true and `username` is set, the add-on checks that user
+      If `enabled` is true and `username` + `password` are set, the add-on uses
+      delegated credentials for API login, checks that user
       and tries to disable OTP via API.
   seconds:
     name: Update Interval (seconds)

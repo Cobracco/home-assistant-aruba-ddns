@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.4.3
+
+- Aggiunto campo `delegated_user.password` in configurazione.
+- Login API Aruba ora usa credenziali delegate (`delegated_user.username/password`) quando abilitate.
+- Allineata autenticazione anche nei hook Let's Encrypt.
+
 ## 0.4.2
 
 - Semplificata gestione `delegated_user` per stabilizzare il salvataggio configurazione UI.

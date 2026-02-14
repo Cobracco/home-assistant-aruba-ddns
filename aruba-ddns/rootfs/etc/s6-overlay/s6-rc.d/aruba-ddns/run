@@ -11,12 +11,25 @@ API_KEY=$(bashio::config 'api_key')
 USERNAME=$(bashio::config 'username')
 PASSWORD=$(bashio::config 'password')
 PASSWORD_BASE64=$(bashio::config 'password_base64')
+DELEGATED_ENABLED=$(bashio::config 'delegated_user.enabled')
+DELEGATED_USERNAME=$(bashio::config 'delegated_user.username')
+DELEGATED_PASSWORD=$(bashio::config 'delegated_user.password')
 WAIT_TIME=$(bashio::config 'seconds')
 IPV4_CFG=$(bashio::config 'ipv4')
 IPV6_CFG=$(bashio::config 'ipv6')
 ALGO=$(bashio::config 'lets_encrypt.algo')
 API_TOKEN=""
 DELEGATED_BOOTSTRAP_DONE="0"
+AUTH_USERNAME="${USERNAME}"
+AUTH_PASSWORD="${PASSWORD}"
+
+if [[ "${DELEGATED_ENABLED}" == "true" && -n "${DELEGATED_USERNAME}" && -n "${DELEGATED_PASSWORD}" ]]; then
+  AUTH_USERNAME="${DELEGATED_USERNAME}"
+  AUTH_PASSWORD="${DELEGATED_PASSWORD}"
+  bashio::log.info "Autenticazione API con delegated user ${AUTH_USERNAME}"
+elif [[ "${DELEGATED_ENABLED}" == "true" ]]; then
+  bashio::log.warning "Delegated user abilitato ma credenziali incomplete; uso username/password principali"
+fi
 
 urlencode() {
   jq -rn --arg v "$1" '$v|@uri'
@@ -70,12 +83,12 @@ derive_zone_from_host() {
 auth_token() {
   local password_for_auth payload code
 
-  password_for_auth="${PASSWORD}"
+  password_for_auth="${AUTH_PASSWORD}"
   if [[ "${PASSWORD_BASE64}" == "true" ]]; then
-    password_for_auth=$(printf '%s' "${PASSWORD}" | base64 | tr -d '\n')
+    password_for_auth=$(printf '%s' "${AUTH_PASSWORD}" | base64 | tr -d '\n')
   fi
 
-  payload="grant_type=password&username=$(urlencode "${USERNAME}")&password=$(urlencode "${password_for_auth}")"
+  payload="grant_type=password&username=$(urlencode "${AUTH_USERNAME}")&password=$(urlencode "${password_for_auth}")"
 
   code=$(curl -sS -o /tmp/aruba_auth_body.json -w "%{http_code}" -X POST "${API_BASE%/}/auth/token" \
     -H "Content-Type: application/x-www-form-urlencoded" \

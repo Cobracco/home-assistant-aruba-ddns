@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.9
+
+- Corrette chiamate Aruba DNS API: ora inviano sia `Authorization-Key` sia `Authorization: Bearer <token>`.
+- Fix 401 in lettura/aggiornamento record dopo login riuscito.
+
 ## 0.2.8
 
 - Aggiunto campo `host` (FQDN completo) nei record DNS per mostrare in lista il dominio completo nella UI Home Assistant.

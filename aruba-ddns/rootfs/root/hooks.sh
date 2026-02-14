@@ -56,34 +56,40 @@ auth_token() {
 api_get_zone() {
   local token="$1"
   local zone="$2"
-  local api_base encoded_zone
+  local api_base api_key encoded_zone
   api_base=$(jq -r '.api_base' "$CONFIG_PATH")
+  api_key=$(jq -r '.api_key' "$CONFIG_PATH")
   encoded_zone=$(urlencode "$zone")
 
   curl -fsSL "${api_base%/}/api/domains/dns/${encoded_zone}/details" \
-    -H "Authorization: ${token}"
+    -H "Authorization-Key: ${api_key}" \
+    -H "Authorization: Bearer ${token}"
 }
 
 api_post_record() {
   local token="$1"
   local payload="$2"
-  local api_base
+  local api_base api_key
   api_base=$(jq -r '.api_base' "$CONFIG_PATH")
+  api_key=$(jq -r '.api_key' "$CONFIG_PATH")
 
   curl -fsSL -X POST "${api_base%/}/api/domains/dns/record" \
     -H "Content-Type: application/json" \
-    -H "Authorization: ${token}" \
+    -H "Authorization-Key: ${api_key}" \
+    -H "Authorization: Bearer ${token}" \
     --data "$payload"
 }
 
 api_delete_record() {
   local token="$1"
   local id_record="$2"
-  local api_base
+  local api_base api_key
   api_base=$(jq -r '.api_base' "$CONFIG_PATH")
+  api_key=$(jq -r '.api_key' "$CONFIG_PATH")
 
   curl -fsSL -X DELETE "${api_base%/}/api/domains/dns/record/${id_record}" \
-    -H "Authorization: ${token}"
+    -H "Authorization-Key: ${api_key}" \
+    -H "Authorization: Bearer ${token}"
 }
 
 domain_to_zone() {

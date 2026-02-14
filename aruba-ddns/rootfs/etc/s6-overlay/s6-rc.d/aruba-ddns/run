@@ -100,7 +100,8 @@ api_get_zone() {
   encoded_zone=$(urlencode "${zone}")
 
   curl -fsSL "${API_BASE%/}/api/domains/dns/${encoded_zone}/details" \
-    -H "Authorization: ${token}"
+    -H "Authorization-Key: ${API_KEY}" \
+    -H "Authorization: Bearer ${token}"
 }
 
 api_put_record() {
@@ -109,7 +110,8 @@ api_put_record() {
 
   curl -fsSL -X PUT "${API_BASE%/}/api/domains/dns/record" \
     -H "Content-Type: application/json" \
-    -H "Authorization: ${token}" \
+    -H "Authorization-Key: ${API_KEY}" \
+    -H "Authorization: Bearer ${token}" \
     --data "${payload}"
 }
 
@@ -119,7 +121,8 @@ api_post_record() {
 
   curl -fsSL -X POST "${API_BASE%/}/api/domains/dns/record" \
     -H "Content-Type: application/json" \
-    -H "Authorization: ${token}" \
+    -H "Authorization-Key: ${API_KEY}" \
+    -H "Authorization: Bearer ${token}" \
     --data "${payload}"
 }
 

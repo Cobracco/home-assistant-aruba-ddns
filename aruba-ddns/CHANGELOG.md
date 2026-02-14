@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.4.7
+
+- Fix runtime config reload: ricarica `options.json` a ogni ciclo per applicare modifiche anche con Save+Restart.
+
 ## 0.4.6
 
 - Fix bootstrap OTP: prima prova `first_access_otp` sul delegated user, poi fallback su utente principale.

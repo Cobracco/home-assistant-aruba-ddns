@@ -228,7 +228,7 @@ update_records() {
     existing=$(echo "${zone_data}" | jq -c \
       --arg n "${full_name,,}" \
       --arg t "${api_type,,}" \
-      '[.Records[]? | select((.Name // "" | tostring | ascii_downcase | sub("\\.$";"")) == ($n | sub("\\.$";"")) and ((.Type // "" | tostring | ascii_downcase) == $t)] | first // empty')
+      '[.Records[]? | select((.Name // "" | tostring | ascii_downcase | sub("\\.$";"")) == ($n | sub("\\.$";"")) and ((.Type // "" | tostring | ascii_downcase) == $t))] | first // empty')
 
     if [[ -n "${existing}" && "${existing}" != "null" ]]; then
       existing_id=$(echo "${existing}" | jq -r '.Id')

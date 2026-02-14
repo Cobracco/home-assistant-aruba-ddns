@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.2
+
+- Fix sintassi filtro `jq` nel matching record esistente (parentesi mancante).
+
 ## 0.3.1
 
 - Fix parsing record Aruba non stringa: normalizzazione `tostring` nei filtri `jq` per evitare l'errore `explode input must be a string`.

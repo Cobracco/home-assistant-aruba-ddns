@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.12
+
+- Aggiunto supporto configurabile cifre OTP (`otp_digits`) per TOTP automatico da `otp_secret`.
+- Default impostato a 8 cifre, compatibile con Aruba OTP.
+
 ## 0.2.11
 
 - Forzata visualizzazione host completo in lista: `host` ora obbligatorio nei record DNS.

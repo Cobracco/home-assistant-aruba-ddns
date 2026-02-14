@@ -18,6 +18,9 @@ configuration:
   otp_secret:
     name: OTP Secret (TOTP)
     description: Base32 TOTP secret used to generate OTP codes automatically at runtime.
+  otp_digits:
+    name: OTP Digits
+    description: Number of OTP digits generated from `otp_secret` (typically 8 for Aruba OTP).
   password_base64:
     name: Password is Base64
     description: Enable only if your Aruba tenant expects the password parameter already Base64 encoded. Normally keep disabled.

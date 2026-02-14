@@ -9,8 +9,10 @@ urlencode() {
 
 generate_totp() {
   local secret="${1//[[:space:]]/}"
+  local digits
   [[ -z "$secret" ]] && return 1
-  oathtool --totp -b "$secret" 2>/dev/null
+  digits=$(jq -r '.otp_digits // 8' "$CONFIG_PATH")
+  oathtool --totp --digits "$digits" -b "$secret" 2>/dev/null
 }
 
 auth_token() {

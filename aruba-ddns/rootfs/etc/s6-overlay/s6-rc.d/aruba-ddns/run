@@ -12,6 +12,7 @@ USERNAME=$(bashio::config 'username')
 PASSWORD=$(bashio::config 'password')
 OTP=$(bashio::config 'otp')
 OTP_SECRET=$(bashio::config 'otp_secret')
+OTP_DIGITS=$(bashio::config 'otp_digits')
 PASSWORD_BASE64=$(bashio::config 'password_base64')
 WAIT_TIME=$(bashio::config 'seconds')
 IPV4_CFG=$(bashio::config 'ipv4')
@@ -69,7 +70,7 @@ derive_zone_from_host() {
 generate_totp() {
   local secret="${1//[[:space:]]/}"
   [[ -z "${secret}" ]] && return 1
-  oathtool --totp -b "${secret}" 2>/dev/null
+  oathtool --totp --digits "${OTP_DIGITS}" -b "${secret}" 2>/dev/null
 }
 
 auth_token() {

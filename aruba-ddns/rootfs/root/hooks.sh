@@ -73,6 +73,20 @@ api_post_record() {
     --data "$payload"
 }
 
+api_put_record() {
+  local token="$1"
+  local payload="$2"
+  local api_base api_key
+  api_base=$(jq -r '.api_base' "$CONFIG_PATH")
+  api_key=$(jq -r '.api_key' "$CONFIG_PATH")
+
+  curl -fsSL -X PUT "${api_base%/}/api/domains/dns/record" \
+    -H "Content-Type: application/json" \
+    -H "Authorization-Key: ${api_key}" \
+    -H "Authorization: Bearer ${token}" \
+    --data "$payload"
+}
+
 api_delete_record() {
   local token="$1"
   local id_record="$2"
@@ -108,6 +122,7 @@ domain_to_zone() {
 deploy_challenge() {
   local domain="$1" _token_filename="$2" token_value="$3"
   local token domain_no_wildcard zone fqdn zone_data zone_id payload wait_seconds existing_same
+  local existing_id existing_count
 
   domain_no_wildcard="${domain#*.}"
   if [[ "$domain" != \*.* ]]; then
@@ -134,11 +149,29 @@ deploy_challenge() {
   existing_same=$(echo "$zone_data" | jq -r \
     --arg n "${fqdn,,}" \
     --arg c "$token_value" \
-    '[.Records[]? | select((.Name // "" | tostring | ascii_downcase | sub("\\.$";"")) == ($n | sub("\\.$";"")) and ((.Type // "" | tostring | ascii_downcase) == "txt") and ((.Content // "" | tostring) == $c))] | length')
+    '[.Records[]? | select((.Name // "" | tostring | ascii_downcase | sub("\\.$";"")) == ($n | sub("\\.$";"")) and (((.Type // "" | tostring | ascii_downcase) == "txt") or ((.Type // "" | tostring | ascii_downcase) == "5")) and ((.Content // "" | tostring) == $c))] | length')
   if [[ "$existing_same" -gt 0 ]]; then
     return 0
   fi
 
+  existing_id=$(echo "$zone_data" | jq -r \
+    --arg n "${fqdn,,}" \
+    '[.Records[]? | select((.Name // "" | tostring | ascii_downcase | sub("\\.$";"")) == ($n | sub("\\.$";"")) and (((.Type // "" | tostring | ascii_downcase) == "txt") or ((.Type // "" | tostring | ascii_downcase) == "5"))) | .Id] | first // empty')
+  existing_count=$(echo "$zone_data" | jq -r \
+    --arg n "${fqdn,,}" \
+    '[.Records[]? | select((.Name // "" | tostring | ascii_downcase | sub("\\.$";"")) == ($n | sub("\\.$";"")) and (((.Type // "" | tostring | ascii_downcase) == "txt") or ((.Type // "" | tostring | ascii_downcase) == "5")))] | length')
+
+  if [[ -n "$existing_id" && "$existing_id" != "null" ]]; then
+    payload=$(jq -nc \
+      --argjson id "$existing_id" \
+      --arg name "$fqdn" \
+      --arg content "$token_value" \
+      '{IdRecord: $id, Name: $name, Content: $content}')
+    if ! api_put_record "$token" "$payload" >/tmp/aruba_hook_put_ok.log 2>/tmp/aruba_hook_put_err.log; then
+      echo "deploy_challenge update TXT failed: $(cat /tmp/aruba_hook_put_err.log)" >&2
+      return 1
+    fi
+  else
   payload=$(jq -nc \
     --argjson idDomain "$zone_id" \
     --arg typeVal "tXT" \
@@ -146,7 +179,15 @@ deploy_challenge() {
     --arg content "$token_value" \
     '{IdDomain: $idDomain, Type: $typeVal, Name: $name, Content: $content}')
 
-  api_post_record "$token" "$payload" >/dev/null
+    if ! api_post_record "$token" "$payload" >/tmp/aruba_hook_post_ok.log 2>/tmp/aruba_hook_post_err.log; then
+      echo "deploy_challenge create TXT failed: $(cat /tmp/aruba_hook_post_err.log)" >&2
+      return 1
+    fi
+  fi
+
+  if [[ "${existing_count:-0}" -gt 1 ]]; then
+    echo "deploy_challenge: found ${existing_count} TXT records for ${fqdn}, using first record id=${existing_id}" >&2
+  fi
 
   wait_seconds=$(jq -r '.lets_encrypt.propagation_seconds // 120' "$CONFIG_PATH")
   sleep "$wait_seconds"
@@ -172,7 +213,7 @@ clean_challenge() {
   ids=$(echo "$zone_data" | jq -r \
     --arg n "${fqdn,,}" \
     --arg c "$token_value" \
-    '[.Records[]? | select((.Name // "" | tostring | ascii_downcase | sub("\\.$";"")) == ($n | sub("\\.$";"")) and ((.Type // "" | tostring | ascii_downcase) == "txt") and ((.Content // "" | tostring) == $c)) | .Id] | .[]?')
+    '[.Records[]? | select((.Name // "" | tostring | ascii_downcase | sub("\\.$";"")) == ($n | sub("\\.$";"")) and ((((.Type // "" | tostring | ascii_downcase) == "txt") or ((.Type // "" | tostring | ascii_downcase) == "5")) and ((.Content // "" | tostring) == $c))) | .Id] | .[]?')
 
   while IFS= read -r id; do
     [[ -z "$id" ]] && continue

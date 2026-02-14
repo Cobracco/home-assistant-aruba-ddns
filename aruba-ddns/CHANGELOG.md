@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.4.10
+
+- Fix ACME DNS hook Aruba: gestione TXT challenge esistente con update (PUT) invece di create sempre.
+- Migliorato matching TXT (tipo testuale o numerico) e log errore dettagliati per HTTP 412.
+
 ## 0.4.9
 
 - Migliorati log Let's Encrypt: stato abilitazione config, avvio rinnovo e risultato finale.

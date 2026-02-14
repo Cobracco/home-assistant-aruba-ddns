@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.4.14
+
+- Tentativo fix HTTP 412 su TXT challenge Aruba: `Content` TXT inviato quotato ("token").
+- Matching e cleanup challenge compatibili con contenuto TXT raw o quotato.
+
 ## 0.4.13
 
 - Fix definitivo filtri `jq` nel hook ACME (sintassi valida, senza parentesi sbilanciate).

@@ -124,6 +124,7 @@ deploy_challenge() {
   local token domain_no_wildcard zone fqdn zone_data zone_id payload wait_seconds existing_same
   local existing_id existing_count
   local zone_lc fqdn_lc rel_name matched_name
+  local token_txt
 
   domain_no_wildcard="${domain#*.}"
   if [[ "$domain" != \*.* ]]; then
@@ -138,6 +139,7 @@ deploy_challenge() {
   fi
 
   fqdn="_acme-challenge.${domain_no_wildcard}"
+  token_txt="\"${token_value}\""
   zone_lc="${zone,,}"
   zone_lc="${zone_lc%.}"
   fqdn_lc="${fqdn,,}"
@@ -162,6 +164,7 @@ deploy_challenge() {
     --arg n "${fqdn_lc}" \
     --arg nr "${rel_name}" \
     --arg c "$token_value" \
+    --arg cq "${token_txt}" \
     '
     def norm: tostring | ascii_downcase | sub("\\.$";"");
     def rec_name: (.Name // "" | norm);
@@ -169,7 +172,7 @@ deploy_challenge() {
     [.Records[]? | select(
       ((rec_name == ($n | sub("\\.$";""))) or (rec_name == ($nr | sub("\\.$";""))))
       and is_txt
-      and ((.Content // "" | tostring) == $c)
+      and (((.Content // "" | tostring) == $c) or ((.Content // "" | tostring) == $cq))
     )] | length
     ')
   if [[ "$existing_same" -gt 0 ]]; then
@@ -218,7 +221,7 @@ deploy_challenge() {
     payload=$(jq -nc \
       --argjson id "$existing_id" \
       --arg name "$matched_name" \
-      --arg content "$token_value" \
+      --arg content "$token_txt" \
       '{IdRecord: $id, Name: $name, Content: $content}')
     if ! api_put_record "$token" "$payload" >/tmp/aruba_hook_put_ok.log 2>/tmp/aruba_hook_put_err.log; then
       echo "deploy_challenge update TXT failed: $(cat /tmp/aruba_hook_put_err.log)" >&2
@@ -229,7 +232,7 @@ deploy_challenge() {
     --argjson idDomain "$zone_id" \
     --arg typeVal "tXT" \
     --arg name "$fqdn" \
-    --arg content "$token_value" \
+    --arg content "$token_txt" \
     '{IdDomain: $idDomain, Type: $typeVal, Name: $name, Content: $content}')
 
     if ! api_post_record "$token" "$payload" >/tmp/aruba_hook_post_ok.log 2>/tmp/aruba_hook_post_err.log; then
@@ -237,7 +240,7 @@ deploy_challenge() {
         --argjson idDomain "$zone_id" \
         --arg typeVal "tXT" \
         --arg name "$rel_name" \
-        --arg content "$token_value" \
+        --arg content "$token_txt" \
         '{IdDomain: $idDomain, Type: $typeVal, Name: $name, Content: $content}')
       if ! api_post_record "$token" "$payload" >/tmp/aruba_hook_post_ok.log 2>/tmp/aruba_hook_post_err.log; then
         echo "deploy_challenge create TXT failed (fqdn=${fqdn}, relative=${rel_name}): $(cat /tmp/aruba_hook_post_err.log)" >&2
@@ -258,6 +261,7 @@ clean_challenge() {
   local domain="$1" _token_filename="$2" token_value="$3"
   local token domain_no_wildcard zone fqdn zone_data ids id
   local zone_lc fqdn_lc rel_name
+  local token_txt
 
   domain_no_wildcard="${domain#*.}"
   if [[ "$domain" != \*.* ]]; then
@@ -269,6 +273,7 @@ clean_challenge() {
   [[ -z "$zone" ]] && return 0
 
   fqdn="_acme-challenge.${domain_no_wildcard}"
+  token_txt="\"${token_value}\""
   zone_lc="${zone,,}"
   zone_lc="${zone_lc%.}"
   fqdn_lc="${fqdn,,}"
@@ -287,6 +292,7 @@ clean_challenge() {
     --arg n "${fqdn_lc}" \
     --arg nr "${rel_name}" \
     --arg c "$token_value" \
+    --arg cq "$token_txt" \
     '
     def norm: tostring | ascii_downcase | sub("\\.$";"");
     def rec_name: (.Name // "" | norm);
@@ -294,7 +300,7 @@ clean_challenge() {
     [.Records[]? | select(
       ((rec_name == ($n | sub("\\.$";""))) or (rec_name == ($nr | sub("\\.$";""))))
       and is_txt
-      and ((.Content // "" | tostring) == $c)
+      and (((.Content // "" | tostring) == $c) or ((.Content // "" | tostring) == $cq))
     ) | .Id] | .[]?
     ')
 

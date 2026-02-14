@@ -138,22 +138,6 @@ api_get_delegated_user_detail() {
   echo "${code}"
 }
 
-api_create_delegated_standard() {
-  local token="$1"
-  local payload="$2"
-  local code
-
-  code=$(curl -sS -o /tmp/aruba_delegate_create_body.json -w "%{http_code}" -X POST \
-    "${API_BASE%/}/api/delegatedusers/standard" \
-    -H "Content-Type: application/json" \
-    -H "Authorization-Key: ${API_KEY}" \
-    -H "Authorization: Bearer ${token}" \
-    --data "${payload}" \
-    2>/tmp/aruba_delegate_create_err.log || true)
-
-  echo "${code}"
-}
-
 api_disable_delegated_otp() {
   local token="$1"
   local payload="$2"
@@ -170,91 +154,32 @@ api_disable_delegated_otp() {
   echo "${code}"
 }
 
-api_send_delegated_password_email() {
-  local token="$1"
-  local payload="$2"
-  local code
-
-  code=$(curl -sS -o /tmp/aruba_delegate_passmail_body.json -w "%{http_code}" -X POST \
-    "${API_BASE%/}/api/delegatedusers/ChangePassword/email" \
-    -H "Content-Type: application/json" \
-    -H "Authorization-Key: ${API_KEY}" \
-    -H "Authorization: Bearer ${token}" \
-    --data "${payload}" \
-    2>/tmp/aruba_delegate_passmail_err.log || true)
-
-  echo "${code}"
-}
-
 ensure_delegated_user_no_otp() {
   local token="$1"
-  local auto_create delegated_username delegated_profile delegated_name delegated_surname delegated_email disable_otp send_password_email
-  local detail_code create_code otp_code passmail_code payload detail_json otp_payload otp_active body_message
-  local created_now=0
+  local delegated_enabled delegated_username
+  local detail_code otp_code otp_payload otp_active body_message
 
-  auto_create=$(bashio::config 'delegated_user.auto_create')
-  if [[ "${auto_create}" != "true" ]]; then
+  delegated_enabled=$(bashio::config 'delegated_user.enabled')
+  if [[ "${delegated_enabled}" != "true" ]]; then
     return 0
   fi
 
   delegated_username=$(bashio::config 'delegated_user.username')
-  delegated_profile=$(bashio::config 'delegated_user.profile')
-  delegated_name=$(bashio::config 'delegated_user.name')
-  delegated_surname=$(bashio::config 'delegated_user.surname')
-  delegated_email=$(bashio::config 'delegated_user.email')
-  disable_otp=$(bashio::config 'delegated_user.disable_otp')
-  send_password_email=$(bashio::config 'delegated_user.send_password_email')
 
   if [[ -z "${delegated_username}" ]]; then
-    bashio::log.warning "Delegated user auto-create attivo ma username non configurato"
+    bashio::log.warning "Delegated user abilitato ma username non configurato"
     return 0
   fi
 
   detail_code=$(api_get_delegated_user_detail "${token}" "${delegated_username}")
   if [[ "${detail_code}" == "200" ]]; then
-    bashio::log.info "Delegated user ${delegated_username} gia presente"
+    otp_active=$(jq -r '.ActiveOTP // empty' /tmp/aruba_delegate_detail_body.json 2>/dev/null || echo "")
   elif [[ "${detail_code}" == "404" ]]; then
-    payload=$(jq -nc \
-      --arg username "${delegated_username}" \
-      --arg profile "${delegated_profile}" \
-      --arg name "${delegated_name}" \
-      --arg surname "${delegated_surname}" \
-      --arg email "${delegated_email}" \
-      '{Username: $username, Profile: $profile, Enabled: true, Name: $name, Surname: $surname, Email: $email}')
-
-    create_code=$(api_create_delegated_standard "${token}" "${payload}")
-    if [[ "${create_code}" == "201" || "${create_code}" == "200" ]]; then
-      bashio::log.info "Delegated user ${delegated_username} creato"
-      detail_json=$(cat /tmp/aruba_delegate_create_body.json 2>/dev/null || echo "")
-      created_now=1
-    else
-      body_message=$(jq -r '.Message // .message // .error_description // .error // empty' /tmp/aruba_delegate_create_body.json 2>/dev/null || true)
-      bashio::log.warning "Creazione delegated user fallita (${create_code}): ${body_message:-$(cat /tmp/aruba_delegate_create_err.log)}"
-      return 0
-    fi
+    bashio::log.warning "Delegated user ${delegated_username} non trovato. Crealo nel pannello Aruba."
+    return 0
   else
     body_message=$(jq -r '.Message // .message // .error_description // .error // empty' /tmp/aruba_delegate_detail_body.json 2>/dev/null || true)
     bashio::log.warning "Verifica delegated user fallita (${detail_code}): ${body_message:-$(cat /tmp/aruba_delegate_detail_err.log)}"
-    return 0
-  fi
-
-  if [[ -z "${detail_json:-}" ]]; then
-    detail_json=$(cat /tmp/aruba_delegate_detail_body.json 2>/dev/null || echo "")
-  fi
-  otp_active=$(echo "${detail_json}" | jq -r '.ActiveOTP // empty' 2>/dev/null || echo "")
-
-  if [[ "${created_now}" == "1" && "${send_password_email}" == "true" ]]; then
-    passmail_code=$(api_send_delegated_password_email "${token}" "$(jq -nc --arg username "${delegated_username}" '{Username: $username}')")
-    if [[ "${passmail_code}" == "201" || "${passmail_code}" == "200" ]]; then
-      bashio::log.info "Delegated user ${delegated_username}: inviata mail cambio password"
-    else
-      body_message=$(jq -r '.Message // .message // .error_description // .error // empty' /tmp/aruba_delegate_passmail_body.json 2>/dev/null || true)
-      bashio::log.warning "Invio mail password delegated user fallito (${passmail_code}): ${body_message:-$(cat /tmp/aruba_delegate_passmail_err.log)}"
-    fi
-  fi
-
-  if [[ "${disable_otp}" != "true" ]]; then
-    bashio::log.info "Delegated user ${delegated_username}: disable_otp disattivato in configurazione"
     return 0
   fi
 

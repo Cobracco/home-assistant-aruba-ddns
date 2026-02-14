@@ -19,14 +19,8 @@ api_key: "YOUR_ARUBA_API_KEY"
 username: "your-user"
 password: "your-password"
 delegated_user:
-  auto_create: false
+  enabled: true
   username: "clientcode.ha"
-  profile: "1,3"
-  name: "Home"
-  surname: "Assistant"
-  email: "ha@example.com"
-  send_password_email: true
-  disable_otp: true
 seconds: 300
 ipv4: ""
 ipv6: ""
@@ -75,12 +69,10 @@ http:
 ## Note operative
 
 - `records` supporta più domini e più host nello stesso loop.
-- Se `delegated_user.auto_create=true`, l'add-on prova a:
-  - creare il delegated user standard (`POST /api/delegatedusers/standard`) se non esiste
-  - inviare email cambio password (`POST /api/delegatedusers/ChangePassword/email`) alla creazione
-  - disattivare OTP su quel delegated user (`PUT /api/delegatedusers/OTP/Disactivate`)
-- Aruba non espone API per impostare direttamente la password del delegated user:
-  dopo la creazione va completata dal pannello Aruba.
+- `delegated_user` non crea account: crea tu l'utente dal pannello Aruba.
+- Se `delegated_user.enabled=true`, l'add-on:
+  - verifica che `delegated_user.username` esista
+  - prova a disattivare OTP su quel delegated user (`PUT /api/delegatedusers/OTP/Disactivate`)
 - Per vedere in lista il dominio completo nella UI, compila `host` (FQDN completo).
 - `host` e obbligatorio e viene usato per la voce in lista.
 - Se `host` e compilato, il valore di `name` viene ignorato.
@@ -99,8 +91,7 @@ http:
 - `PUT /api/domains/dns/record` (Domains_UpdateRecord)
 - `POST /api/domains/dns/record` (Domains_AddRecord)
 - `DELETE /api/domains/dns/record/{idRecord}` (cleanup challenge TXT)
-- `POST /api/delegatedusers/standard` (bootstrap delegated user opzionale)
-- `POST /api/delegatedusers/ChangePassword/email` (invio mail cambio password delegated user)
+- `GET /api/delegatedusers/{username}/detail` (verifica delegated user)
 - `PUT /api/delegatedusers/OTP/Disactivate` (disattivazione OTP delegated user)
 
 Fonti:

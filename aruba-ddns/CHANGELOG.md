@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.4.2
+
+- Semplificata gestione `delegated_user` per stabilizzare il salvataggio configurazione UI.
+- Rimosso bootstrap creazione account delegato e invio email password.
+- Nuovo flusso: l'utente delegato viene creato manualmente su Aruba; add-on fa solo verifica e disattivazione OTP.
+
 ## 0.4.1
 
 - Aggiunto invio email cambio password del delegated user appena creato (`POST /api/delegatedusers/ChangePassword/email`).

@@ -53,13 +53,32 @@ normalize_options_records() {
   fi
 
   jq '
+    def normalize_name($host; $zone; $name):
+      if (($name // "") | tostring) != "" then
+        ($name | tostring)
+      elif (($host // "") | tostring) == "" then
+        ""
+      else
+        (($host | tostring | ascii_downcase | sub("\\.$";"")) as $h
+        | ($zone | tostring | ascii_downcase | sub("\\.$";"")) as $z
+        | if $z == "" then
+            (if ($h | contains(".")) then ($h | split(".") | .[0]) else $h end)
+          elif $h == $z then
+            "@"
+          elif ($h | endswith("." + $z)) then
+            ($h[0:((($h | length) - ($z | length)) - 1)])
+          else
+            ""
+          end)
+      end;
+
     .records = (
       (.records // [])
       | map(
           . + {
             host: (.host // ""),
             zone: (.zone // ""),
-            name: (.name // ""),
+            name: normalize_name((.host // ""); (.zone // ""); (.name // "")),
             content: (.content // ""),
             create_if_missing: (.create_if_missing // true)
           }

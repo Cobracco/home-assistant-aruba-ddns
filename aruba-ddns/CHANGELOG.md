@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.4.20
+
+- Normalizzazione records migliorata: calcolo automatico e persistenza del campo `name` da `host/zone` per record aggiunti dalla UI.
+
 ## 0.4.19
 
 - Migliorata diagnosi errori `HTTP 412` in create record: logga conflitto record esistente su stesso nome (type/content).

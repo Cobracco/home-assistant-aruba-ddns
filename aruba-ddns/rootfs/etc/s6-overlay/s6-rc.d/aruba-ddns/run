@@ -103,16 +103,56 @@ auth_token_for_user() {
 
 acquire_api_token() {
   local delegated_token primary_token
+  local primary_err="/tmp/aruba_auth_primary_err.log"
+
+  is_otp_required() {
+    local file="$1"
+    grep -Eqi 'one[- ]time password required|otp required|password monouso' "${file}" 2>/dev/null
+  }
 
   if [[ "${DELEGATED_ENABLED}" != "true" ]]; then
-    auth_token_for_user "${USERNAME}" "${PASSWORD}" "" /tmp/aruba_auth_body.json /tmp/aruba_auth_curl_err.log
-    return $?
+    primary_token=$(auth_token_for_user "${USERNAME}" "${PASSWORD}" "" /tmp/aruba_auth_body.json /tmp/aruba_auth_curl_err.log 2>"${primary_err}" || true)
+    if [[ -n "${primary_token}" ]]; then
+      echo "${primary_token}"
+      return 0
+    fi
+
+    if is_otp_required "${primary_err}" && [[ -n "${DELEGATED_FIRST_ACCESS_OTP}" ]]; then
+      bashio::log.warning "OTP richiesto: uso first_access_otp per autenticazione utente principale"
+      primary_token=$(auth_token_for_user "${USERNAME}" "${PASSWORD}" "${DELEGATED_FIRST_ACCESS_OTP}" /tmp/aruba_auth_primary_otp_body.json /tmp/aruba_auth_primary_otp_curl_err.log 2>/tmp/aruba_auth_primary_otp_err.log || true)
+      if [[ -n "${primary_token}" ]]; then
+        echo "${primary_token}"
+        return 0
+      fi
+      cat /tmp/aruba_auth_primary_otp_err.log >&2
+      return 1
+    fi
+
+    cat "${primary_err}" >&2
+    return 1
   fi
 
   if [[ -z "${DELEGATED_USERNAME}" || -z "${DELEGATED_PASSWORD}" ]]; then
     bashio::log.warning "Delegated user abilitato ma credenziali incomplete; uso username/password principali"
-    auth_token_for_user "${USERNAME}" "${PASSWORD}" "" /tmp/aruba_auth_body.json /tmp/aruba_auth_curl_err.log
-    return $?
+    primary_token=$(auth_token_for_user "${USERNAME}" "${PASSWORD}" "" /tmp/aruba_auth_body.json /tmp/aruba_auth_curl_err.log 2>"${primary_err}" || true)
+    if [[ -n "${primary_token}" ]]; then
+      echo "${primary_token}"
+      return 0
+    fi
+
+    if is_otp_required "${primary_err}" && [[ -n "${DELEGATED_FIRST_ACCESS_OTP}" ]]; then
+      bashio::log.warning "OTP richiesto: uso first_access_otp per autenticazione utente principale"
+      primary_token=$(auth_token_for_user "${USERNAME}" "${PASSWORD}" "${DELEGATED_FIRST_ACCESS_OTP}" /tmp/aruba_auth_primary_otp_body.json /tmp/aruba_auth_primary_otp_curl_err.log 2>/tmp/aruba_auth_primary_otp_err.log || true)
+      if [[ -n "${primary_token}" ]]; then
+        echo "${primary_token}"
+        return 0
+      fi
+      cat /tmp/aruba_auth_primary_otp_err.log >&2
+      return 1
+    fi
+
+    cat "${primary_err}" >&2
+    return 1
   fi
 
   delegated_token=$(auth_token_for_user "${DELEGATED_USERNAME}" "${DELEGATED_PASSWORD}" "" /tmp/aruba_auth_delegated_body.json /tmp/aruba_auth_delegated_curl_err.log 2>/tmp/aruba_auth_delegated_err.log || true)
@@ -122,7 +162,7 @@ acquire_api_token() {
     return 0
   fi
 
-  if ! grep -qi "one-time password required" /tmp/aruba_auth_delegated_err.log 2>/dev/null; then
+  if ! is_otp_required /tmp/aruba_auth_delegated_err.log; then
     cat /tmp/aruba_auth_delegated_err.log >&2
     return 1
   fi

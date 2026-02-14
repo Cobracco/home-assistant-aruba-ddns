@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.4.5
+
+- Fix auth OTP: retry automatico con `delegated_user.first_access_otp` anche per login utente principale (quando delegato non configurato o incompleto).
+- Migliorato riconoscimento errore OTP required con pattern piu robusto.
+
 ## 0.4.4
 
 - Aggiunto `delegated_user.first_access_otp` per bootstrap OTP one-shot.

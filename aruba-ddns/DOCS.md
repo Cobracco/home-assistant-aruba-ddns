@@ -80,6 +80,8 @@ http:
 - Se al primo login del delegato Aruba risponde `One-time password required`, imposta temporaneamente
   `delegated_user.first_access_otp` (OTP account principale): l'add-on fa bootstrap,
   disattiva OTP del delegato e poi passa automaticamente al login con delegato.
+- Se anche il login principale richiede OTP, l'add-on usa lo stesso `delegated_user.first_access_otp`
+  come fallback per ottenere il token.
 - Dopo bootstrap riuscito, svuota `delegated_user.first_access_otp`.
 - Per vedere in lista il dominio completo nella UI, compila `host` (FQDN completo).
 - `host` e obbligatorio e viene usato per la voce in lista.

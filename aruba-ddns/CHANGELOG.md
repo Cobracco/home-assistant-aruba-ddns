@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.3.4
+
+- Fix anti-duplicati: deduplica record configurati uguali nello stesso ciclo (`host+type`) per evitare create multiple.
+- Matching record Aruba reso piu robusto con fallback su campi alternativi (`Name/Host/Record` e `Type/RecordType/DnsType`).
+
 ## 0.3.3
 
 - Fix matching record esistente Aruba: ora confronta sia FQDN completo sia nome relativo in zona (es. `casa`).

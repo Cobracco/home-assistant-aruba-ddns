@@ -151,6 +151,7 @@ update_records() {
   local current_ipv6="$3"
   local total
   local auth_error=0
+  declare -A seen_records=()
 
   total=$(jq '.records | length' /data/options.json)
   if [[ "${total}" -eq 0 ]]; then
@@ -159,8 +160,9 @@ update_records() {
   fi
 
   for idx in $(seq 0 $((total - 1))); do
-    local zone host name type create_if_missing content desired_content api_type zone_data
+    local zone host name type create_if_missing content desired_content api_type api_type_code zone_data
     local zone_id full_name relative_name zone_lc existing existing_id existing_content payload
+    local record_key
 
     zone=$(jq -r ".records[${idx}].zone // \"\"" /data/options.json)
     host=$(jq -r ".records[${idx}].host // \"\"" /data/options.json)
@@ -197,6 +199,18 @@ update_records() {
       bashio::log.warning "Record ${full_name}: type non supportato (${type})"
       continue
     fi
+    case "${api_type}" in
+      a) api_type_code="0" ;;
+      aAAA) api_type_code="1" ;;
+      *) api_type_code="" ;;
+    esac
+
+    record_key="${full_name,,}|${api_type_code}"
+    if [[ -n "${seen_records[${record_key}]:-}" ]]; then
+      bashio::log.debug "SKIP duplicate config ${full_name} (${type})"
+      continue
+    fi
+    seen_records["${record_key}"]=1
 
     if [[ -n "${content}" ]]; then
       desired_content="${content}"
@@ -240,7 +254,16 @@ update_records() {
       --arg n "${full_name,,}" \
       --arg nr "${relative_name}" \
       --arg t "${api_type,,}" \
-      '[.Records[]? | select(((.Name // "" | tostring | ascii_downcase | sub("\\.$";"")) == ($n | sub("\\.$";"")) or (.Name // "" | tostring | ascii_downcase | sub("\\.$";"")) == ($nr | sub("\\.$";""))) and ((.Type // "" | tostring | ascii_downcase) == $t))] | first // empty')
+      --arg tc "${api_type_code}" \
+      '
+      def norm: tostring | ascii_downcase | sub("\\.$";"");
+      def rec_name: (.Name // .Host // .Record // "");
+      def rec_type: (.Type // .RecordType // .DnsType // "");
+      [.Records[]? | select(
+        (((rec_name | norm) == ($n | norm)) or ((rec_name | norm) == ($nr | norm))) and
+        (((rec_type | norm) == $t) or ((rec_type | norm) == $tc))
+      )] | first // empty
+      ')
 
     if [[ -n "${existing}" && "${existing}" != "null" ]]; then
       existing_id=$(echo "${existing}" | jq -r '.Id')

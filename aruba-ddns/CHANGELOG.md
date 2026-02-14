@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.3.3
+
+- Fix matching record esistente Aruba: ora confronta sia FQDN completo sia nome relativo in zona (es. `casa`).
+- Evita `CREATED` ripetuti quando il record e gia presente.
+
 ## 0.3.2
 
 - Fix sintassi filtro `jq` nel matching record esistente (parentesi mancante).

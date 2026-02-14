@@ -160,7 +160,7 @@ update_records() {
 
   for idx in $(seq 0 $((total - 1))); do
     local zone host name type create_if_missing content desired_content api_type zone_data
-    local zone_id full_name existing existing_id existing_content payload
+    local zone_id full_name relative_name zone_lc existing existing_id existing_content payload
 
     zone=$(jq -r ".records[${idx}].zone // \"\"" /data/options.json)
     host=$(jq -r ".records[${idx}].host // \"\"" /data/options.json)
@@ -225,10 +225,22 @@ update_records() {
       continue
     fi
 
+    relative_name="${full_name,,}"
+    relative_name="${relative_name%.}"
+    zone_lc="${zone,,}"
+    zone_lc="${zone_lc%.}"
+    if [[ "${relative_name}" == "${zone_lc}" ]]; then
+      relative_name="@"
+    elif [[ "${relative_name}" == *".${zone_lc}" ]]; then
+      relative_name="${relative_name%.${zone_lc}}"
+      relative_name="${relative_name%.}"
+    fi
+
     existing=$(echo "${zone_data}" | jq -c \
       --arg n "${full_name,,}" \
+      --arg nr "${relative_name}" \
       --arg t "${api_type,,}" \
-      '[.Records[]? | select((.Name // "" | tostring | ascii_downcase | sub("\\.$";"")) == ($n | sub("\\.$";"")) and ((.Type // "" | tostring | ascii_downcase) == $t))] | first // empty')
+      '[.Records[]? | select(((.Name // "" | tostring | ascii_downcase | sub("\\.$";"")) == ($n | sub("\\.$";"")) or (.Name // "" | tostring | ascii_downcase | sub("\\.$";"")) == ($nr | sub("\\.$";""))) and ((.Type // "" | tostring | ascii_downcase) == $t))] | first // empty')
 
     if [[ -n "${existing}" && "${existing}" != "null" ]]; then
       existing_id=$(echo "${existing}" | jq -r '.Id')

@@ -2,7 +2,7 @@
 name: Aruba DDNS
 slug: aruba_ddns
 description: Aggiorna record DNS Aruba verso IP pubblico e rinnova certificati Let's Encrypt
-version: 0.2.15
+version: 0.2.16
 url: https://github.com/Cobracco/home-assistant-aruba-ddns/tree/main/aruba-ddns
 startup: services
 init: false
@@ -56,12 +56,12 @@ schema:
   ipv4: str?
   ipv6: str?
   records:
-    - host: str
-      zone: str?
-      name: str?
+    - host: match(^.*$)
+      zone: match(^.*$)
+      name: match(^.*$)
       type: list(A|AAAA)
       create_if_missing: bool?
-      content: str?
+      content: match(^.*$)
   lets_encrypt:
     accept_terms: bool
     algo: list(rsa|prime256v1|secp384r1)

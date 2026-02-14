@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.16
+
+- Fix salvataggio modifiche record DNS dalla UI Home Assistant: schema reso tollerante a stringhe vuote durante edit (`host`, `zone`, `name`, `content`).
+
 ## 0.2.15
 
 - Aggiunto flag `otp_log_generated` per stampare nei log l'OTP usato (debug temporaneo).

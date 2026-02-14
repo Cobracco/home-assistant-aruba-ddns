@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.4.17
+
+- Fix schema records: `host`, `zone`, `name`, `content` resi opzionali per compatibilita con editor UI Home Assistant.
+
 ## 0.4.16
 
 - Fix schema configurazione: `records[].content` reso opzionale (`str?`) per evitare errore "Missing option content" al salvataggio.

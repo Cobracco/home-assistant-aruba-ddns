@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.4.1
+
+- Aggiunto invio email cambio password del delegated user appena creato (`POST /api/delegatedusers/ChangePassword/email`).
+- Nuovo flag config `delegated_user.send_password_email` (default `true`).
+
 ## 0.4.0
 
 - Aggiunta sezione `delegated_user` in configurazione add-on.

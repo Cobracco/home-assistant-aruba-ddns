@@ -19,6 +19,7 @@ configuration:
     name: Delegated user
     description: >-
       Optional bootstrap to create an Aruba standard delegated user and disable OTP on it.
+      If `send_password_email` is enabled, it also sends delegated password reset email on create.
       Note: Aruba API does not provide delegated-user password set; complete password setup
       from Aruba panel, then you can use delegated credentials in this add-on.
   seconds:

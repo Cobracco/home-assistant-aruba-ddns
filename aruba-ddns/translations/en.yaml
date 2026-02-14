@@ -1,0 +1,43 @@
+---
+configuration:
+  api_base:
+    name: API Base URL
+    description: Base URL of Aruba Business APIs. Keep default unless Aruba provides an alternative endpoint.
+  api_key:
+    name: API Key
+    description: Aruba Business API key used as `Authorization-Key` header.
+  username:
+    name: Username
+    description: Aruba Business username used to request an access token.
+  password:
+    name: Password
+    description: Aruba Business password used to request an access token.
+  otp:
+    name: OTP (optional)
+    description: One-time password if your Aruba account has 2FA enabled.
+  password_base64:
+    name: Password is Base64
+    description: Enable only if your Aruba tenant expects the password parameter already Base64 encoded. Normally keep disabled.
+  seconds:
+    name: Update Interval (seconds)
+    description: Seconds between DDNS sync cycles and certificate renewal checks.
+  ipv4:
+    name: IPv4 Source
+    description: Leave empty for auto-detection (ipify). You can also set a fixed IPv4 or a URL returning plain IPv4 text.
+  ipv6:
+    name: IPv6 Source
+    description: Optional IPv6 override. Leave empty to skip AAAA auto value unless explicitly configured.
+  records:
+    name: DNS Records
+    description: >-
+      List of records to manage. For each item set:
+      `zone` (domain zone), `name` (`@` for root or host like `www`),
+      `type` (`A` or `AAAA`), `create_if_missing`, and optional `content`.
+      If `content` is empty, the add-on uses detected public IP.
+  lets_encrypt:
+    name: Let's Encrypt
+    description: >-
+      Certificate settings. Use `accept_terms` to enable renewals,
+      `domains` for certificate names (supports wildcard),
+      `zones` for DNS challenge zone mapping,
+      and `certfile`/`keyfile` output paths in `/ssl`.

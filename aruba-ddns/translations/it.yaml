@@ -1,0 +1,43 @@
+---
+configuration:
+  api_base:
+    name: URL base API
+    description: URL base delle API Aruba Business. Mantieni il default salvo endpoint alternativi forniti da Aruba.
+  api_key:
+    name: API Key
+    description: Chiave API Aruba Business usata come header `Authorization-Key`.
+  username:
+    name: Username
+    description: Username Aruba Business usato per ottenere il token di accesso.
+  password:
+    name: Password
+    description: Password Aruba Business usata per ottenere il token di accesso.
+  otp:
+    name: OTP (opzionale)
+    description: Codice one-time se il tuo account Aruba ha 2FA attivo.
+  password_base64:
+    name: Password in Base64
+    description: Attiva solo se il tuo tenant Aruba richiede la password gia codificata Base64. Normalmente lascia disattivato.
+  seconds:
+    name: Intervallo aggiornamento (secondi)
+    description: Secondi tra un ciclo DDNS e il successivo controllo rinnovo certificati.
+  ipv4:
+    name: Sorgente IPv4
+    description: Lascia vuoto per auto-rilevamento (ipify). Puoi anche inserire un IPv4 fisso o un URL che restituisce l'IPv4 in testo.
+  ipv6:
+    name: Sorgente IPv6
+    description: Override IPv6 opzionale. Lascia vuoto per non valorizzare automaticamente AAAA salvo configurazione esplicita.
+  records:
+    name: Record DNS
+    description: >-
+      Elenco record da gestire. Per ogni voce imposta:
+      `zone` (zona dominio), `name` (`@` per root o host come `www`),
+      `type` (`A` o `AAAA`), `create_if_missing` e `content` opzionale.
+      Se `content` e vuoto, l'add-on usa l'IP pubblico rilevato.
+  lets_encrypt:
+    name: Let's Encrypt
+    description: >-
+      Impostazioni certificati. Usa `accept_terms` per abilitare i rinnovi,
+      `domains` per i nomi certificato (supporta wildcard),
+      `zones` per mappare la zona DNS della challenge,
+      `certfile`/`keyfile` per i file emessi in `/ssl`.

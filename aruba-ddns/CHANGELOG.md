@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.6
+
+- Aggiunti help interattivi UI per tutti i campi configurazione (`translations/en.yaml` e `translations/it.yaml`).
+
 ## 0.2.5
 
 - Corretto flusso auth Aruba: password inviata in chiaro di default (come da docs Aruba Business).

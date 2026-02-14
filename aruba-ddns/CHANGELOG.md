@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.4.15
+
+- Aggiunti log dettagliati nei hook ACME (`deploy_challenge`/`clean_challenge`) per mostrare stato reale durante attese di propagazione DNS.
+
 ## 0.4.14
 
 - Tentativo fix HTTP 412 su TXT challenge Aruba: `Content` TXT inviato quotato ("token").

@@ -152,6 +152,7 @@ deploy_challenge() {
     rel_name="${rel_name%.}"
   fi
   token=$(auth_token)
+  echo "deploy_challenge: domain=${domain_no_wildcard} zone=${zone} fqdn=${fqdn} relative=${rel_name}" >&2
 
   zone_data=$(api_get_zone "$token" "$zone")
   zone_id=$(echo "$zone_data" | jq -r '.Id // empty')
@@ -227,6 +228,7 @@ deploy_challenge() {
       echo "deploy_challenge update TXT failed: $(cat /tmp/aruba_hook_put_err.log)" >&2
       return 1
     fi
+    echo "deploy_challenge: updated TXT id=${existing_id}" >&2
   else
   payload=$(jq -nc \
     --argjson idDomain "$zone_id" \
@@ -246,6 +248,9 @@ deploy_challenge() {
         echo "deploy_challenge create TXT failed (fqdn=${fqdn}, relative=${rel_name}): $(cat /tmp/aruba_hook_post_err.log)" >&2
         return 1
       fi
+      echo "deploy_challenge: created TXT using relative name=${rel_name}" >&2
+    else
+      echo "deploy_challenge: created TXT using fqdn name=${fqdn}" >&2
     fi
   fi
 
@@ -254,6 +259,7 @@ deploy_challenge() {
   fi
 
   wait_seconds=$(jq -r '.lets_encrypt.propagation_seconds // 120' "$CONFIG_PATH")
+  echo "deploy_challenge: waiting ${wait_seconds}s for DNS propagation" >&2
   sleep "$wait_seconds"
 }
 
@@ -286,6 +292,7 @@ clean_challenge() {
     rel_name="${rel_name%.}"
   fi
   token=$(auth_token)
+  echo "clean_challenge: domain=${domain_no_wildcard} zone=${zone} fqdn=${fqdn} relative=${rel_name}" >&2
 
   zone_data=$(api_get_zone "$token" "$zone")
   ids=$(echo "$zone_data" | jq -r \
@@ -307,6 +314,7 @@ clean_challenge() {
   while IFS= read -r id; do
     [[ -z "$id" ]] && continue
     api_delete_record "$token" "$id" >/dev/null || true
+    echo "clean_challenge: deleted TXT id=${id}" >&2
   done <<< "$ids"
 }
 

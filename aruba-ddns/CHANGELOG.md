@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.4.19
+
+- Migliorata diagnosi errori `HTTP 412` in create record: logga conflitto record esistente su stesso nome (type/content).
+
 ## 0.4.18
 
 - Aggiunta normalizzazione automatica `records` in `/data/options.json`: reinserisce campi mancanti (`name` incluso) con default sicuri.

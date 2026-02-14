@@ -430,6 +430,7 @@ update_records() {
   for idx in $(seq 0 $((total - 1))); do
     local zone host name type create_if_missing content desired_content api_type api_type_code zone_data
     local zone_id full_name relative_name zone_lc existing existing_id existing_content payload
+    local conflict_same_name conflict_type conflict_content
     local record_key
 
     zone=$(jq -r ".records[${idx}].zone // \"\"" /data/options.json)
@@ -571,7 +572,25 @@ update_records() {
     if api_post_record "${token}" "${payload}" >/tmp/aruba_post_ok.log 2>/tmp/aruba_post_err.log; then
       bashio::log.info "CREATED ${full_name} (${type}) -> ${desired_content}"
     else
-      bashio::log.warning "Errore create ${full_name}: $(cat /tmp/aruba_post_err.log)"
+      if grep -q "412" /tmp/aruba_post_err.log; then
+        conflict_same_name=$(echo "${zone_data}" | jq -c \
+          --arg n "${full_name,,}" \
+          --arg nr "${relative_name}" \
+          '
+          def norm: tostring | ascii_downcase | sub("\\.$";"");
+          def rec_name: (.Name // .Host // .Record // "");
+          [.Records[]? | select(((rec_name | norm) == ($n | norm)) or ((rec_name | norm) == ($nr | norm)))] | first // empty
+          ')
+        if [[ -n "${conflict_same_name}" && "${conflict_same_name}" != "null" ]]; then
+          conflict_type=$(echo "${conflict_same_name}" | jq -r '.Type // .RecordType // .DnsType // "unknown"')
+          conflict_content=$(echo "${conflict_same_name}" | jq -r '.Content // ""')
+          bashio::log.warning "Errore create ${full_name}: conflitto record esistente (type=${conflict_type}, content=${conflict_content}). Verifica pannello Aruba."
+        else
+          bashio::log.warning "Errore create ${full_name}: HTTP 412 (record non accettato da Aruba). $(cat /tmp/aruba_post_err.log)"
+        fi
+      else
+        bashio::log.warning "Errore create ${full_name}: $(cat /tmp/aruba_post_err.log)"
+      fi
     fi
   done
 

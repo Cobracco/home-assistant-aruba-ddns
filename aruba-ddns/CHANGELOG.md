@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.4.0
+
+- Aggiunta sezione `delegated_user` in configurazione add-on.
+- Bootstrap opzionale: crea delegated user standard Aruba se mancante.
+- Disattivazione OTP opzionale sul delegated user via API Aruba.
+- Migliorati log bootstrap delegated user (verifica, create, disable OTP).
+
 ## 0.3.4
 
 - Fix anti-duplicati: deduplica record configurati uguali nello stesso ciclo (`host+type`) per evitare create multiple.

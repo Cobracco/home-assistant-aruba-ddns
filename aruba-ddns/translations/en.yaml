@@ -15,6 +15,12 @@ configuration:
   password_base64:
     name: Password is Base64
     description: Enable only if your Aruba tenant expects the password parameter already Base64 encoded. Normally keep disabled.
+  delegated_user:
+    name: Delegated user
+    description: >-
+      Optional bootstrap to create an Aruba standard delegated user and disable OTP on it.
+      Note: Aruba API does not provide delegated-user password set; complete password setup
+      from Aruba panel, then you can use delegated credentials in this add-on.
   seconds:
     name: Update Interval (seconds)
     description: Seconds between DDNS sync cycles and certificate renewal checks.

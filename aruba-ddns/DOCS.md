@@ -18,6 +18,14 @@ api_base: https://api.arubabusiness.it
 api_key: "YOUR_ARUBA_API_KEY"
 username: "your-user"
 password: "your-password"
+delegated_user:
+  auto_create: false
+  username: "clientcode.ha"
+  profile: "1,3"
+  name: "Home"
+  surname: "Assistant"
+  email: "ha@example.com"
+  disable_otp: true
 seconds: 300
 ipv4: ""
 ipv6: ""
@@ -66,6 +74,11 @@ http:
 ## Note operative
 
 - `records` supporta più domini e più host nello stesso loop.
+- Se `delegated_user.auto_create=true`, l'add-on prova a:
+  - creare il delegated user standard (`POST /api/delegatedusers/standard`) se non esiste
+  - disattivare OTP su quel delegated user (`PUT /api/delegatedusers/OTP/Disactivate`)
+- Aruba non espone API per impostare direttamente la password del delegated user:
+  dopo la creazione va completata dal pannello Aruba.
 - Per vedere in lista il dominio completo nella UI, compila `host` (FQDN completo).
 - `host` e obbligatorio e viene usato per la voce in lista.
 - Se `host` e compilato, il valore di `name` viene ignorato.
@@ -84,6 +97,8 @@ http:
 - `PUT /api/domains/dns/record` (Domains_UpdateRecord)
 - `POST /api/domains/dns/record` (Domains_AddRecord)
 - `DELETE /api/domains/dns/record/{idRecord}` (cleanup challenge TXT)
+- `POST /api/delegatedusers/standard` (bootstrap delegated user opzionale)
+- `PUT /api/delegatedusers/OTP/Disactivate` (disattivazione OTP delegated user)
 
 Fonti:
 - https://api.arubabusiness.it/docs/

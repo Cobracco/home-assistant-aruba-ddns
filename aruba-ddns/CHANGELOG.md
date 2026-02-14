@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.4.21
+
+- Rimosse scritture automatiche su `/data/options.json` (normalizzazione records) per evitare interferenze con Save+Restart della UI Supervisor.
+- Mantiene sola lettura config + attesa sincronizzazione all'avvio.
+
 ## 0.4.20
 
 - Normalizzazione records migliorata: calcolo automatico e persistenza del campo `name` da `host/zone` per record aggiunti dalla UI.

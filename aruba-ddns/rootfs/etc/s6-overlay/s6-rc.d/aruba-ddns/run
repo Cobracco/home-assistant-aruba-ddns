@@ -45,53 +45,6 @@ wait_for_options_sync() {
   done
 }
 
-normalize_options_records() {
-  local tmp_file="/tmp/options.normalized.json"
-
-  if ! jq -e '.records | type == "array"' /data/options.json >/dev/null 2>&1; then
-    return 0
-  fi
-
-  jq '
-    def normalize_name($host; $zone; $name):
-      if (($name // "") | tostring) != "" then
-        ($name | tostring)
-      elif (($host // "") | tostring) == "" then
-        ""
-      else
-        (($host | tostring | ascii_downcase | sub("\\.$";"")) as $h
-        | ($zone | tostring | ascii_downcase | sub("\\.$";"")) as $z
-        | if $z == "" then
-            (if ($h | contains(".")) then ($h | split(".") | .[0]) else $h end)
-          elif $h == $z then
-            "@"
-          elif ($h | endswith("." + $z)) then
-            ($h[0:((($h | length) - ($z | length)) - 1)])
-          else
-            ""
-          end)
-      end;
-
-    .records = (
-      (.records // [])
-      | map(
-          . + {
-            host: (.host // ""),
-            zone: (.zone // ""),
-            name: normalize_name((.host // ""); (.zone // ""); (.name // "")),
-            content: (.content // ""),
-            create_if_missing: (.create_if_missing // true)
-          }
-        )
-    )
-  ' /data/options.json > "${tmp_file}" || return 0
-
-  if ! cmp -s /data/options.json "${tmp_file}"; then
-    cp -f "${tmp_file}" /data/options.json
-    bashio::log.info "Normalizzazione records: aggiunti campi mancanti (host/zone/name/content/create_if_missing)"
-  fi
-}
-
 load_runtime_config() {
   API_BASE=$(bashio::config 'api_base')
   API_KEY=$(bashio::config 'api_key')
@@ -622,7 +575,6 @@ load_runtime_config
 
 bashio::log.info "Attendo sincronizzazione configurazione Supervisor"
 wait_for_options_sync
-normalize_options_records
 load_runtime_config
 
 if bashio::config.true 'lets_encrypt.accept_terms'; then
@@ -647,7 +599,6 @@ fi
 
 bashio::log.info "Starting Aruba DDNS"
 while true; do
-  normalize_options_records
   load_runtime_config
 
   if [[ -z "${API_TOKEN}" ]]; then
